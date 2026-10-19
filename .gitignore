@@ -1,4 +1,4 @@
-# 第三方库（用 ./fetch-vendors.sh 拉取，约 12MB，不入库）
+# 第三方库（用 ./fetch-vendors.sh 或 node tools/fetch-vendors.mjs 拉取，约 12MB，不入库）
 vendor/
 vendor2/
 
@@ -12,6 +12,10 @@ assets/viewer.html
 # 依赖
 test/node_modules/
 node_modules/
+
+# 测试产物（make-fixtures.py 生成，verify-exports.py 回写）
+test/fixtures/
+test/out/
 
 # 本地状态
 .versioncode

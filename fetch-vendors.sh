@@ -27,8 +27,8 @@ dl "https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.js"   vendor2/katex.m
 dl "https://cdn.jsdelivr.net/npm/katex@0.16/dist/katex.min.css"  vendor2/katex.min.css
 dl "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js" vendor2/mermaid.min.js
 dl "https://cdn.jsdelivr.net/npm/mammoth/mammoth.browser.min.js" vendor2/mammoth.js
-dl "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.32.2/legacy/build/pdf.min.js"        vendor2/pdf.min.js
-dl "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.32.2/legacy/build/pdf.worker.min.js" vendor2/pdf.worker.min.js
+dl "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"        vendor2/pdf.min.js
+dl "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js" vendor2/pdf.worker.min.js
 dl "https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"          vendor2/xlsx.full.min.js
 dl "https://cdn.jsdelivr.net/npm/pptxgenjs/dist/pptxgen.bundle.js"    vendor2/pptxgen.bundle.js
 dl "https://cdn.jsdelivr.net/npm/jszip@3.10.2/dist/jszip.min.js"      vendor2/jszip.min.js
@@ -44,7 +44,7 @@ done
 
 echo "== pdf.js CMap + 标准字体（中文 PDF 必需，缺了会整页白屏）=="
 if [ ! -f vendor2/pdfjs/.fetched ]; then
-  curl -sS --max-time 60 "https://data.jsdelivr.com/v1/packages/npm/pdfjs-dist@4.0.379?structure=flat" -o /tmp/pj4.json
+  curl -sS --max-time 60 "https://data.jsdelivr.com/v1/packages/npm/pdfjs-dist@3.11.174?structure=flat" -o /tmp/pj4.json
   python3 - <<'PY'
 import json, os, subprocess
 d = json.load(open("/tmp/pj4.json"))
@@ -57,7 +57,7 @@ for f in files:
         if os.path.exists(out):
             continue
         subprocess.run(["curl","-sS","--max-time","90","-o",out,
-                        "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379"+f], check=False)
+                        "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174"+f], check=False)
 print("cmaps:", len(os.listdir("vendor2/pdfjs/cmaps")),
       "| standard_fonts:", len(os.listdir("vendor2/pdfjs/standard_fonts")))
 PY

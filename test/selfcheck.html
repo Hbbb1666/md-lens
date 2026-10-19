@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>md-lens 自检</title>
+<style>
+  body { font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; margin: 0; padding: 24px; background: #f6f8fa; color: #1f2328; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: #59636e; }
+  .case { background: #fff; border: 1px solid #d1d9e0; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  .case > header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-weight: 600; background: #f6f8fa; border-bottom: 1px solid #d1d9e0; }
+  .badge { font-size: 12px; padding: 1px 8px; border-radius: 10px; font-weight: 500; }
+  .badge.pass { background: #dafbe1; color: #1a7f37; }
+  .badge.fail { background: #ffebe9; color: #cf222e; }
+  .badge.run  { background: #ddf4ff; color: #0969da; }
+  ul { margin: 0; padding: 10px 14px 10px 32px; }
+  li.ok::marker { content: "✓ "; color: #1a7f37; }
+  li.no { color: #cf222e; }
+  #summary { position: sticky; bottom: 0; padding: 12px 16px; background: #1f2328; color: #fff; border-radius: 8px; font-weight: 600; }
+  #summary.bad { background: #82071e; }
+  iframe { display: none; }
+</style>
+</head>
+<body>
+<h1>md-lens 自检</h1>
+<p class="sub">在真实浏览器里跑一遍：5 种格式渲染 + 3 种导出。需要 <code>node test/server.mjs</code> 在跑。</p>
+<div id="cases"></div>
+<div id="summary" class="run">准备中…</div>
+<iframe id="frame"></iframe>
+
+<script>
+const FIXTURES = 'fixtures/';
+const summaryEl = document.getElementById('summary');
+const casesEl = document.getElementById('cases');
+
+function addCase(name) {
+  const el = document.createElement('div');
+  el.className = 'case';
+  el.innerHTML = '<header><span class="nm">' + name + '</span><span class="badge run">运行中</span></header><ul></ul>';
+  casesEl.appendChild(el);
+  return el;
+}
+function mark(el, ok, details) {
+  const badge = el.querySelector('.badge');
+  badge.className = 'badge ' + (ok ? 'pass' : 'fail');
+  badge.textContent = ok ? '通过' : '失败';
+  const ul = el.querySelector('ul');
+  ul.innerHTML = '';
+  for (const [label, passed] of Object.entries(details)) {
+    const li = document.createElement('li');
+    li.className = passed ? 'ok' : 'no';
+    li.textContent = label;
+    ul.appendChild(li);
+  }
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function fetchB64(file) {
+  const r = await fetch(FIXTURES + file);
+  if (!r.ok) throw new Error('取不到 ' + file);
+  const u8 = new Uint8Array(await r.arrayBuffer());
+  let s = '';
+  for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+// viewer.html 与被测代码同源，用 iframe 隔离，避免两次 show 相互污染
+function loadViewer() {
+  return new Promise((resolve, reject) => {
+    const f = document.getElementById('frame');
+    f.onload = () => resolve(f.contentWindow);
+    f.onerror = reject;
+    f.src = '../assets/viewer.html?selfcheck=' + Date.now();
+  });
+}
+
+const RENDER = [
+  ['Markdown', 'sample.md', 'content', 800, c => ({
+    '标题 h1/h2': c.querySelectorAll('h1,h2').length >= 3,
+    '表格 3 行': c.querySelectorAll('table tr').length === 3,
+    '代码块 1 个': c.querySelectorAll('pre code').length === 1,
+    '引用块 1 个': c.querySelectorAll('blockquote').length === 1,
+  })],
+  ['Word (.docx)', 'sample.docx', 'docView', 2600, c => ({
+    '标题文字': c.textContent.includes('一级标题') && c.textContent.includes('二级标题'),
+    '表格 3×3': c.querySelectorAll('table tr').length === 3 &&
+                c.querySelectorAll('table tr:first-child td,table tr:first-child th').length === 3,
+    '图片内联': /<img[^>]+src="data:image/.test(c.innerHTML),
+  })],
+  ['Excel (.xlsx)', 'sample.xlsx', 'sheetView', 2600, c => ({
+    '两个工作表': c.textContent.includes('成绩表') && c.textContent.includes('第二表'),
+    '公式缓存值 179': c.textContent.includes('179'),
+  })],
+  ['PPT (.pptx)', 'sample.pptx', 'pptxView', 2600, c => ({
+    '两页都在': c.textContent.includes('封面标题') && c.textContent.includes('第二页'),
+    '要点文字': c.textContent.includes('要点一') && c.textContent.includes('要点二'),
+  })],
+  ['RTF', 'sample.rtf', 'content', 1200, c => ({
+    '正文两条': c.textContent.includes('RTF regression sample') && c.textContent.includes('Second paragraph'),
+  })],
+];
+
+async function runRender() {
+  let pass = 0;
+  for (const [label, file, view, delay, check] of RENDER) {
+    const el = addCase('渲染 · ' + label);
+    try {
+      const w = await loadViewer();
+      const d = w.document;
+      w.MDLens.show(file, await fetchB64(file));
+      await wait(delay);
+      const details = check(d.getElementById(view));
+      const ok = Object.values(details).every(Boolean);
+      mark(el, ok, details);
+      if (ok) pass++;
+    } catch (e) {
+      mark(el, false, { ['异常: ' + e.message]: false });
+    }
+  }
+  return { pass, total: RENDER.length };
+}
+
+async function runExport() {
+  const el = addCase('导出 · docx / xlsx / pptx');
+  const results = {};
+  try {
+    const w = await loadViewer();
+    const d = w.document;
+
+    // 拦截下载，把字节留下来
+    const captured = [];
+    let currentName = '';
+    const origCreate = w.URL.createObjectURL;
+    w.URL.createObjectURL = function (blob) { captured.push({ blob, name: currentName }); return origCreate.call(w.URL, blob); };
+    const origClick = w.HTMLAnchorElement.prototype.click;
+    w.HTMLAnchorElement.prototype.click = function () { currentName = this.download || ''; };
+
+    const md = '# 一级标题\n\n正文段落。\n\n## 二级标题\n\n- 条目一\n- 条目二\n\n| 名称 | 数量 |\n|---|---|\n| 甲 | 1 |\n| 乙 | 2 |\n';
+    w.MDLens.show('sample.md', btoa(String.fromCharCode(...new TextEncoder().encode(md))));
+    await wait(700);
+
+    for (const [kind, btn] of [['docx', 'exWord'], ['xlsx', 'exExcel'], ['pptx', 'exPpt']]) {
+      captured.length = 0;
+      d.getElementById('btnExport').click();
+      await wait(150);
+      d.getElementById(btn).click();
+      await wait(2600);
+      if (!captured.length) { results[kind + ' 产生文件'] = false; continue; }
+      const blob = captured[0].blob;
+      const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+      // 回写给服务器，让 verify-exports.py 用 Office 解析库真校验
+      // 回写给服务器，让 verify-exports.py 用 Office 解析库真校验
+      const r = await fetch('/__save?name=export.' + kind, { method: 'POST', body: blob });
+      if (!r.ok) { results[kind + ' 回写失败 HTTP ' + r.status] = false; continue; }
+      const saved = await r.json();
+      if (saved.error) { results[kind + ' 回写失败: ' + saved.error] = false; continue; }
+      results[kind + ' 是 ZIP/OOXML (' + head.join(',') + ')'] = head[0] === 0x50 && head[1] === 0x4B;
+      results[kind + ' 回写 ' + saved.size + ' 字节'] = saved.size > 500;
+    }
+    w.URL.createObjectURL = origCreate;
+    w.HTMLAnchorElement.prototype.click = origClick;
+
+    const ok = Object.values(results).length > 0 && Object.values(results).every(Boolean);
+    mark(el, ok, results);
+    return { pass: ok ? 1 : 0, total: 1 };
+  } catch (e) {
+    mark(el, false, { ['异常: ' + e.message]: false });
+    return { pass: 0, total: 1 };
+  }
+}
+
+(async () => {
+  const a = await runRender();
+  const b = await runExport();
+  const pass = a.pass + b.pass, total = a.total + b.total;
+  summaryEl.className = pass === total ? '' : 'bad';
+  summaryEl.textContent = `${pass}/${total} 组通过` + (pass === total ? ' — 全部正常' : ' — 有失败项，见上面红字');
+  window.__selfcheckDone = { pass, total };
+})();
+</script>
+</body>
+</html>

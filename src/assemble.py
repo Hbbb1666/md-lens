@@ -13,7 +13,8 @@ import re
 import shutil
 import sys
 
-BASE = pathlib.Path("/root/mdlens")
+# 项目根目录 = 本文件所在 src/ 的上一级（不要写死容器路径，否则 clones 到别的机器上必挂）
+BASE = pathlib.Path(__file__).resolve().parent.parent
 TPL = BASE / "src" / "viewer.tpl.html"
 OUTDIR = BASE / "assets"
 LIBS = OUTDIR / "libs"
@@ -49,8 +50,41 @@ LIB_FILES = [
     (V2 / "jszip.min.js",       "jszip.min.js"),
 ]
 
+# viewer.tpl.html 不是手写文件，它是四个分片按顺序拼接的结果。
+# 以前这里只读 tpl，于是「改分片 → 跑 assemble」看起来正常、
+# 实际改动根本进不了 APK（tpl 是上一次拼接留下的旧拷贝）。
+PARTS = ["viewer.v2.part1.html", "viewer.v2.part2.js",
+         "viewer.v2.part3.js", "viewer.v2.part4.js"]
+
+def load_template() -> str:
+    """有分片就用分片拼，缺分片才退回已提交的 tpl。"""
+    src = BASE / "src"
+    missing = [n for n in PARTS if not (src / n).exists()]
+    if not missing:
+        return "".join(rd(src / n) for n in PARTS)
+    if len(missing) == len(PARTS):
+        return rd(TPL)
+    sys.exit(f"[assemble] 分片不全，缺 {missing}")
+
+def check_template(text: str) -> None:
+    # 分片拼错（少一个、顺序反了）在这里就要炸，别等到 APK 里白屏才发现
+    if not text.lstrip().lower().startswith("<!doctype html") and "<html" not in text[:2000].lower():
+        sys.exit("[assemble] 模板开头不像 HTML 文档")
+    if "</html>" not in text:
+        sys.exit("[assemble] 模板没有 </html> 结尾，分片可能没拼全")
+    for fn in PARTS:
+        if (BASE / "src" / fn).exists() and fn.startswith("viewer.v2.part") and fn.endswith(".js"):
+            marker = (BASE / "src" / fn).read_text(encoding="utf-8").strip()[:60]
+            if marker and marker not in text:
+                sys.exit(f"[assemble] 分片 {fn} 的内容没出现在拼接结果里")
+
 def main() -> None:
-    tpl = TPL.read_text(encoding="utf-8")
+    tpl = load_template()
+    check_template(tpl)
+    # 保持 tpl 与分片同步：它是给人 grep 用的快照，不是真源
+    if tpl != (TPL.read_text(encoding="utf-8") if TPL.exists() else None):
+        TPL.write_text(tpl, encoding="utf-8")
+        print("[assemble] 已用分片刷新 src/viewer.tpl.html")
     mapping = {
         "@@GITHUB_LIGHT@@": css_safe(rd(V1 / "github-markdown-light.css")),
         "@@GITHUB_DARK@@":  css_safe(theme_scoped(rd(V1 / "github-markdown-dark.css"), ".markdown-body")),

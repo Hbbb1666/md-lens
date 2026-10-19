@@ -150,18 +150,24 @@
     return LIB.load("xlsx.full.min.js").then(function(){
       var wb = XLSX.utils.book_new();
       var tables = blocks.filter(function(b){ return b.type === "table" && b.rows.length; });
-      if (tables.length){
-        tables.forEach(function(t, i){
-          var ws = XLSX.utils.aoa_to_sheet(t.rows);
-          XLSX.utils.book_append_sheet(wb, ws, "表" + (i + 1));
-        });
-      } else {
+      // 表格各占一个工作表（原有行为）；但文档里同时有标题/正文时，
+      // 只导出表格会把非表格内容整段丢掉 —— 用户拿到的是一个没有上下文的表。
+      // 所以额外补一个「内容」工作表，把完整大纲按 序号/类型/内容 列出来。
+      tables.forEach(function(t, i){
+        var ws = XLSX.utils.aoa_to_sheet(t.rows);
+        XLSX.utils.book_append_sheet(wb, ws, "表" + (i + 1));
+      });
+      var others = blocks.filter(function(b){ return b.text; });
+      if (!tables.length || others.length){
         var rows = [["序号", "类型", "内容"]];
-        blocks.filter(function(b){ return b.text; }).forEach(function(b, i){
+        others.forEach(function(b, i){
           var label = b.type === "h" ? ("标题" + b.level) : (b.type === "li" ? "要点" : "正文");
           rows.push([i + 1, label, b.text]);
         });
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "内容");
+      }
+      if (!wb.SheetNames.length){
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["序号", "类型", "内容"]]), "内容");
       }
       var out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       return new Uint8Array(out);
