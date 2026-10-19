@@ -47,6 +47,28 @@ JS 渲染层（src/viewer.tpl.html 分片 + src/assemble.py 拼装）
 
 ---
 
+## 在电脑上开始开发
+
+```bash
+git clone https://github.com/Hbbb1666/md-lens.git
+cd md-lens
+./fetch-vendors.sh      # 拉取 12MB 第三方库（不入库，push 会超时）
+./build.sh              # 产出 out/mdlens.apk
+```
+
+**环境要求**
+- JDK 17+（`javac --release 17`）
+- Android SDK，`ANDROID_HOME` 指向它，需 `build-tools/34.0.0` 和 `platforms/android-34`
+- Node（跑 `test/` 下的回归脚本，可选）
+- Windows 用户请在 **WSL / Git Bash** 里跑，脚本是 bash
+
+**aarch64 与 x86_64 的差异**：Android 的 `aapt2` / `zipalign` 是 x86_64 ELF。本项目的开发容器是 aarch64，所以 `build.sh` 会自动检测并套 `qemu-amd64-static`；**普通 x86_64 电脑上不需要 qemu**，脚本检测不到就直连执行。
+
+**不需要实机的部分**：`src/assemble.py` 的拼装断言、`test/` 下的 jsdom 回归（.doc 表格行列数、docx 图片数）都可以纯本地跑。
+**需要实机的部分**：安装 APK、PDF 预览、长图导出、分享接收、文件管理器关联——这些我在手机上验。
+
+---
+
 ## 构建
 
 环境：Linux（本项目在 aarch64 容器里开发，用 qemu 跑 x86_64 的 aapt2/zipalign）、JDK 17+、Android SDK build-tools 34。

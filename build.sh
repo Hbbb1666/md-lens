@@ -2,20 +2,28 @@
 # MD 解读 —— APK 构建脚本（aarch64 容器，Android SDK build-tools 34）
 set -euo pipefail
 
-Q=/usr/bin/qemu-amd64-static
-SDK=/root/android-sdk
+# 项目根目录（脚本所在位置，不写死）
+P="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Android SDK：优先环境变量，其次常见位置
+SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
 BT=$SDK/build-tools/34.0.0
 AJ=$SDK/platforms/android-34/android.jar
-P=/root/mdlens
+# aarch64 容器里 aapt2/zipalign 是 x86_64 ELF，需要 qemu 包一层；
+# x86_64 主机（普通电脑）直接执行即可
+Q=""
+if [ "$(uname -m)" = "aarch64" ] && [ -x /usr/bin/qemu-amd64-static ]; then
+  Q=/usr/bin/qemu-amd64-static
+fi
 OUT=$P/out
 APK=$OUT/mdlens.apk
 
 fail() { echo "[build] ✗ $*" >&2; exit 1; }
 step() { echo "[build] → $*"; }
 
-[ -x "$Q" ]  || fail "缺少 qemu-amd64-static（aapt2/zipalign 是 x86_64）"
+[ -x $Q ]  || fail "缺少 qemu-amd64-static（aapt2/zipalign 是 x86_64）"
 [ -f "$AJ" ] || fail "缺少 android.jar"
-[ -f "$BT/lib/d8.jar" ] || fail "缺少 d8.jar"
+[ -f "$BT/lib/d8.jar" ] || fail "缺少 d8.jar（检查 ANDROID_HOME）"
+[ -d "$P/vendor2" ] || fail "缺少 vendor2，请先运行 ./fetch-vendors.sh"
 
 VC_FILE="$P/.versioncode"
 VC=$(cat "$VC_FILE" 2>/dev/null || echo 5)
@@ -37,11 +45,11 @@ grep -q "marked" "$P/assets/viewer.html" || fail "viewer.html 里没有 marked"
 
 # ---------- 2. 编译资源 ----------
 step "编译资源"
-"$Q" "$BT/aapt2" compile --dir "$P/res" -o "$OUT/res.zip" || fail "aapt2 compile 失败"
+$Q "$BT/aapt2" compile --dir "$P/res" -o "$OUT/res.zip" || fail "aapt2 compile 失败"
 
 # ---------- 3. 链接资源（主资源用位置参数，不要用 -R） ----------
 step "链接资源"
-"$Q" "$BT/aapt2" link \
+$Q "$BT/aapt2" link \
     -o "$OUT/base.apk" \
     -I "$AJ" \
     --manifest "$P/AndroidManifest.xml" \
@@ -85,7 +93,7 @@ with zipfile.ZipFile(apk, "a", zipfile.ZIP_STORED) as z:
 print("[build]   classes.dex 已加入")
 PY
 
-"$Q" "$BT/zipalign" -f -p 4 "$OUT/unsigned.apk" "$OUT/aligned.apk" || fail "zipalign 失败"
+$Q "$BT/zipalign" -f -p 4 "$OUT/unsigned.apk" "$OUT/aligned.apk" || fail "zipalign 失败"
 [ -s "$OUT/aligned.apk" ] || fail "zipalign 输出为空"
 
 # ---------- 7. 签名 ----------
