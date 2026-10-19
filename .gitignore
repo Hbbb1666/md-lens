@@ -1,0 +1,19 @@
+# 第三方库（用 ./fetch-vendors.sh 拉取，约 12MB，不入库）
+vendor/
+vendor2/
+
+# 构建产物
+out/
+assets/libs/
+assets/viewer.html
+*.apk
+*.zip
+
+# 依赖
+test/node_modules/
+node_modules/
+
+# 本地状态
+.versioncode
+debug.keystore
+*.log

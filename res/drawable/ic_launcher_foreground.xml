@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 纸张 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M37,25 L63,25 L79,41 L79,81 A4,4 0 0 1 75,85 L37,85 A4,4 0 0 1 33,81 L33,29 A4,4 0 0 1 37,25 Z" />
+    <!-- 折角 -->
+    <path
+        android:fillColor="#2F6FEB"
+        android:pathData="M63,25 L79,41 L63,41 Z" />
+    <!-- 文字行 -->
+    <path
+        android:fillColor="#2F6FEB"
+        android:pathData="M41,52 L71,52 L71,56 L41,56 Z M41,62 L71,62 L71,66 L41,66 Z M41,72 L58,72 L58,76 L41,76 Z" />
+</vector>

@@ -1,0 +1,2330 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=6, user-scalable=yes, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>MD 解读</title>
+<link rel="stylesheet" href="libs/katex.min.css">
+<style id="css-github-light">@@GITHUB_LIGHT@@</style>
+<style id="css-github-dark">@@GITHUB_DARK@@</style>
+<style id="css-hl-light">@@HL_LIGHT@@</style>
+<style id="css-hl-dark">@@HL_DARK@@</style>
+<style>
+:root{
+  --bg:#ffffff; --fg:#1f2328; --muted:#656d76; --line:#d1d9e0;
+  --card:#ffffff; --accent:#0969da; --bar:rgba(255,255,255,.92);
+  --sheet:rgba(0,0,0,.35);
+}
+html[data-theme="dark"]{
+  --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --line:#30363d;
+  --card:#161b22; --accent:#4493f8; --bar:rgba(13,17,23,.92);
+  --sheet:rgba(0,0,0,.6);
+}
+@media (prefers-color-scheme: dark){
+  html[data-theme="auto"]{
+    --bg:#0d1117; --fg:#e6edf3; --muted:#9198a1; --line:#30363d;
+    --card:#161b22; --accent:#4493f8; --bar:rgba(13,17,23,.92);
+    --sheet:rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;}
+body{overscroll-behavior-y:contain}
+/* ============ 顶栏 ============ */
+#bar{
+  position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;gap:1px;padding:0 4px;
+  background:var(--bar);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  padding-top:env(safe-area-inset-top);
+  height:calc(54px + env(safe-area-inset-top));
+}
+#bar button{
+  border:0;background:transparent;color:var(--fg);font-size:15px;
+  height:40px;min-width:38px;padding:0 7px;border-radius:10px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:inherit;cursor:pointer;transition:background .15s;
+}
+#bar button:active{background:rgba(128,128,128,.22)}
+#bar button.on{color:var(--accent);background:rgba(9,105,218,.10)}
+#title{
+  flex:1;min-width:0;font-size:14.5px;font-weight:600;letter-spacing:.2px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px;
+}
+#title small{display:block;font-size:10.5px;font-weight:400;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25}
+#progress{position:fixed;top:0;left:0;height:2px;width:0;background:var(--accent);
+  z-index:99;transition:width .25s, opacity .4s}
+/* ============ 搜索条 ============ */
+#searchBar{
+  position:fixed;left:0;right:0;z-index:58;display:flex;align-items:center;gap:6px;
+  padding:8px 10px;background:var(--card);border-bottom:1px solid var(--line);
+  transform:translateY(-260%);transition:transform .2s;
+  top:calc(54px + env(safe-area-inset-top));
+}
+#searchBar.open{transform:translateY(0)}
+#searchInput{
+  flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--fg);
+  border-radius:9px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;
+}
+#searchInput:focus{border-color:var(--accent)}
+#searchBar button{border:0;background:transparent;color:var(--fg);font-size:14px;
+  padding:8px 10px;border-radius:8px;cursor:pointer;font-family:inherit}
+#searchBar button:active{background:rgba(128,128,128,.16)}
+#searchCount{font-size:12px;color:var(--muted);min-width:52px;text-align:center}
+/* ============ 正文区 ============ */
+#scroller{position:absolute;top:0;left:0;right:0;bottom:0;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding-top:calc(54px + env(safe-area-inset-top));
+  padding-bottom:40px;}
+#content,#sourceView,#docView,#pdfView,#sheetView,#pptxView{display:none}
+#content{max-width:900px;margin:0 auto;padding:18px 16px 64px;}
+#content.show,#sourceView.show,#docView.show,#pdfView.show,#sheetView.show,#pptxView.show{display:block}
+#content.markdown-body{background:transparent!important;font-size:var(--fs,17px)!important;
+  line-height:1.78!important;word-wrap:break-word;}
+#content.markdown-body h1,#content.markdown-body h2,#content.markdown-body h3,
+#content.markdown-body h4,#content.markdown-body h5,#content.markdown-body h6{
+  font-weight:650;line-height:1.35;margin-top:1.35em;margin-bottom:.55em;scroll-margin-top:74px;}
+#content.markdown-body h1{font-size:1.66em;padding-bottom:.32em;border-bottom:1px solid var(--line)}
+#content.markdown-body h2{font-size:1.38em;padding-bottom:.28em;border-bottom:1px solid var(--line)}
+#content.markdown-body h3{font-size:1.18em}
+#content.markdown-body p,#content.markdown-body li{line-height:1.78}
+/* 表格：按内容自然宽度，不硬撑满屏；超宽时横向滚动 */
+#content.markdown-body table{display:block;width:fit-content;max-width:100%;
+  overflow-x:auto;border-collapse:collapse;font-size:.93em}
+#content.markdown-body table th,#content.markdown-body table td{
+  border:1px solid var(--line);padding:7px 11px;text-align:left;
+  white-space:nowrap;vertical-align:top}
+#content.markdown-body table th{font-weight:650;background:rgba(128,128,128,.10)}
+#content.markdown-body table tr:nth-child(2n){background:rgba(128,128,128,.07)}
+#content.markdown-body pre{border-radius:10px;font-size:.86em;line-height:1.6;padding:13px 14px}
+#content.markdown-body :not(pre)>code{border-radius:5px;padding:.16em .38em;font-size:.87em}
+#content.markdown-body img{max-width:100%;height:auto;border-radius:8px;display:block;margin:12px auto}
+#content.markdown-body img.missing{border:1px dashed var(--line);padding:22px 12px;
+  color:var(--muted);font-size:.85em;text-align:center;min-height:60px}
+#content.markdown-body blockquote{border-left:4px solid var(--line);color:var(--muted)}
+#content.markdown-body .doc-heading{font-size:1.06em;margin-top:1.3em;margin-bottom:.45em;line-height:1.5}
+#content.markdown-body a{color:var(--accent)}
+#content.markdown-body hr{border:0;border-top:1px solid var(--line);margin:22px 0}
+#content.markdown-body .katex-display{overflow-x:auto;overflow-y:hidden;padding:.35em 0}
+#content.markdown-body .mermaid-box{margin:14px 0;text-align:center;overflow-x:auto}
+#content.markdown-body .mermaid-box svg{max-width:100%;height:auto}
+#content.markdown-body .hl-hit{background:#ffd33d;color:#1f2328;border-radius:2px}
+html[data-theme="dark"] #content.markdown-body .hl-hit{background:#9e6a03;color:#fff}
+/* 源码 / 纯文本视图 */
+#sourceView{display:none;white-space:pre-wrap;word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Noto Sans Mono CJK SC",monospace;
+  font-size:13.5px;line-height:1.62;color:var(--fg);padding:16px 14px;}
+#sourceView.show{display:block}
+/* docx 视图 */
+#docView{display:none;max-width:900px;margin:0 auto;padding:18px 16px 64px;}
+#docView.show{display:block}
+#docView .markdown-body{font-size:var(--fs,17px);line-height:1.78}
+#docView table{display:block;width:fit-content;max-width:100%;overflow-x:auto;border-collapse:collapse}
+#docView th,#docView td{border:1px solid var(--line);padding:6px 10px;text-align:left;white-space:nowrap;vertical-align:top}
+/* pdf 视图 */
+#pdfView{display:none;padding:12px 10px 60px;text-align:center}
+#pdfView.show{display:block}
+#pdfView canvas{display:block;margin:0 auto 12px;max-width:100%;height:auto;
+  border:1px solid var(--line);border-radius:6px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+#pdfView .pageno{font-size:11.5px;color:var(--muted);margin:-6px 0 14px}
+#pdfView .pbar{display:flex;gap:10px;justify-content:center;align-items:center;margin:8px 0 14px;flex-wrap:wrap}
+#pdfView .pbar button{border:1px solid var(--line);background:var(--card);color:var(--fg);
+  border-radius:9px;padding:8px 14px;font-size:13.5px;font-family:inherit;cursor:pointer}
+/* xlsx 视图 */
+#sheetView{display:none;padding:12px 10px 60px;overflow-x:auto}
+#sheetView.show{display:block}
+#sheetView .sheet-tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+#sheetView .sheet-tabs button{border:1px solid var(--line);background:var(--card);color:var(--fg);
+  border-radius:8px;padding:6px 12px;font-size:13px;font-family:inherit;cursor:pointer}
+#sheetView .sheet-tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#sheetView table{border-collapse:collapse;font-size:13px;margin:0 auto;background:var(--card)}
+#sheetView th,#sheetView td{border:1px solid var(--line);padding:5px 9px;min-width:44px;
+  max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+#sheetView th{background:rgba(128,128,128,.12);font-weight:600;position:sticky;top:0}
+/* pptx 视图 */
+#pptxView{display:none;max-width:900px;margin:0 auto;padding:14px 14px 64px}
+#pptxView.show{display:block}
+#pptxView .slide{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:16px 18px;margin-bottom:14px;line-height:1.65}
+#pptxView .slide-h{font-size:14px;color:var(--muted);margin-bottom:8px;font-weight:600}
+#pptxView .slide-t{font-size:18px;font-weight:680;margin:0 0 10px}
+#pptxView .slide ul{margin:0;padding-left:20px}
+#pptxView .slide img{max-width:100%;border-radius:6px;margin-top:8px}
+/* ============ 空状态 ============ */
+#welcome{display:none;text-align:center;padding:46px 24px 40px}
+#welcome.show{display:block}
+#welcome .logo{font-size:48px;line-height:1;margin-bottom:12px}
+#welcome h1{font-size:21px;margin:0 0 8px}
+#welcome p{color:var(--muted);font-size:13.5px;line-height:1.7;margin:0 auto 24px;max-width:350px}
+#welcome .actions{display:flex;flex-direction:column;gap:10px;max-width:340px;margin:0 auto}
+#welcome .actions button{
+  border:1px solid var(--line);background:var(--card);color:var(--fg);
+  border-radius:13px;padding:14px 17px;font-size:15px;font-family:inherit;
+  font-weight:550;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;
+}
+#welcome .actions button:active{background:rgba(128,128,128,.1)}
+#welcome .actions button .ico{font-size:20px}
+#welcome .actions button small{display:block;font-weight:400;color:var(--muted);font-size:11.5px;margin-top:2px}
+#welcome .hint{margin-top:22px;font-size:11.5px;color:var(--muted);line-height:1.7}
+/* ============ 抽屉 ============ */
+.drawer{
+  position:fixed;top:0;bottom:0;width:min(84vw,340px);z-index:60;
+  background:var(--card);border-right:1px solid var(--line);
+  transform:translateX(-102%);transition:transform .26s cubic-bezier(.32,.72,0,1);
+  display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);
+}
+#tocDrawer{left:auto;right:0;border-right:0;border-left:1px solid var(--line);transform:translateX(102%)}
+.drawer.open{transform:translateX(0)!important}
+.drawer .head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.drawer .head h2{font-size:15px;margin:0;flex:1;font-weight:650}
+.drawer .head button{border:0;background:transparent;color:var(--muted);font-size:20px;padding:4px 8px;cursor:pointer}
+.drawer .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.fileitem{display:block;width:100%;border:0;background:transparent;color:var(--fg);
+  text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);
+  font-family:inherit;font-size:14.5px;cursor:pointer;line-height:1.45}
+.fileitem:active,.fileitem.active{background:rgba(9,105,218,.10)}
+.fileitem .nm{display:block;font-weight:520;word-break:break-all}
+.fileitem .meta{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drawer .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px;line-height:1.8}
+.tocitem{display:block;width:100%;border:0;background:transparent;color:var(--fg);
+  text-align:left;padding:9px 16px;font-family:inherit;font-size:13.5px;
+  cursor:pointer;line-height:1.45;border-left:3px solid transparent}
+.tocitem.l2{padding-left:30px;font-size:13px;color:var(--muted)}
+.tocitem.l3{padding-left:44px;font-size:12.5px;color:var(--muted)}
+.tocitem.l4,.tocitem.l5,.tocitem.l6{padding-left:54px;font-size:12px;color:var(--muted)}
+.tocitem:active{background:rgba(128,128,128,.1)}
+#scrim{position:fixed;inset:0;background:var(--sheet);z-index:55;opacity:0;
+  pointer-events:none;transition:opacity .25s}
+#scrim.show{opacity:1;pointer-events:auto}
+/* ============ 底部导出面板 ============ */
+#sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--card);
+  border-radius:20px 20px 0 0;border-top:1px solid var(--line);
+  transform:translateY(110%);transition:transform .3s cubic-bezier(.32,.72,0,1);
+  padding:8px 0 calc(14px + env(safe-area-inset-bottom));
+  max-height:82vh;display:flex;flex-direction:column;
+}
+#sheet.open{transform:translateY(0)}
+#sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 10px}
+#sheet h2{font-size:15px;margin:0 0 4px;padding:0 20px;font-weight:650}
+#sheet .list{padding:2px 8px 4px;overflow-y:auto}
+#sheet .row{
+  display:flex;align-items:center;gap:13px;width:100%;border:0;background:transparent;
+  color:var(--fg);text-align:left;padding:12px 12px;border-radius:12px;font-family:inherit;
+  font-size:15px;cursor:pointer;
+}
+#sheet .row:active{background:rgba(128,128,128,.13)}
+#sheet .row .ico{font-size:19px;width:24px;text-align:center}
+#sheet .row .tx{flex:1;min-width:0}
+#sheet .row small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+#sheet .cancel{width:100%;border:0;background:transparent;color:var(--muted);
+  font-size:14px;padding:14px;font-family:inherit;cursor:pointer;border-top:1px solid var(--line)}
+/* ============ 大纲转文档面板 ============ */
+#outlinePanel{
+  position:fixed;inset:0;z-index:80;background:var(--bg);
+  display:flex;flex-direction:column;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);
+  padding-top:env(safe-area-inset-top);
+}
+#outlinePanel.open{transform:translateY(0)}
+#outlinePanel .op-head{display:flex;align-items:center;gap:8px;padding:10px 12px;
+  border-bottom:1px solid var(--line);background:var(--card)}
+#outlinePanel .op-head h2{flex:1;font-size:15px;margin:0;font-weight:650}
+#outlinePanel .op-head button{border:0;background:transparent;color:var(--fg);
+  font-size:14px;padding:8px 11px;border-radius:8px;cursor:pointer;font-family:inherit}
+#outlinePanel .op-head button.pri{background:var(--accent);color:#fff;font-weight:600}
+#outlinePanel .op-body{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:12px}
+#outlinePanel textarea{
+  flex:1;width:100%;border:1px solid var(--line);border-radius:12px;background:var(--card);
+  color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:13px;line-height:1.7;padding:14px;resize:none;outline:none;
+}
+#outlinePanel textarea:focus{border-color:var(--accent)}
+#outlinePanel .op-foot{display:flex;gap:8px;padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--line);background:var(--card);flex-wrap:wrap}
+#outlinePanel .op-foot button{border:1px solid var(--line);background:var(--bg);color:var(--fg);
+  border-radius:11px;padding:11px 14px;font-size:14px;font-family:inherit;cursor:pointer;flex:1;min-width:96px}
+#outlinePanel .op-foot button:active{background:rgba(128,128,128,.13)}
+#outlinePanel .op-foot button .ico{margin-right:5px}
+#outlinePanel .op-hint{font-size:11.5px;color:var(--muted);padding:0 14px 8px;line-height:1.6}
+/* ============ toast / loading ============ */
+#toast{
+  position:fixed;left:50%;bottom:calc(30px + env(safe-area-inset-bottom));transform:translate(-50%,20px);
+  background:#222a33;color:#fff;font-size:13.5px;padding:11px 20px;border-radius:22px;
+  z-index:200;opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;
+  max-width:86vw;text-align:center;line-height:1.5;box-shadow:0 6px 24px rgba(0,0,0,.3)
+}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+html[data-theme="dark"] #toast{background:#e6edf3;color:#0d1117}
+#busy{position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.32);
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+#busy.show{display:flex}
+#busy .box{background:var(--card);border-radius:16px;padding:22px 30px;text-align:center;
+  box-shadow:0 10px 40px rgba(0,0,0,.3);min-width:180px}
+#busy .spin{width:30px;height:30px;margin:0 auto 12px;border-radius:50%;
+  border:3px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#busy .txt{font-size:13.5px;color:var(--fg)}
+body.exporting #bar,body.exporting #scrim,body.exporting #sheet,
+body.exporting #fileDrawer,body.exporting #tocDrawer,body.exporting #searchBar{display:none!important}
+body.exporting #scroller{padding-top:0!important;position:static;overflow:visible;height:auto}
+body.exporting #content{max-width:none;padding:10px}
+/* 导出时强制内容不超宽：宽表格/PDF 画布会被视口裁掉，这是导出不全的根因 */
+body.exporting #sheetView,body.exporting #pdfView{overflow:visible!important;padding:8px}
+body.exporting #sheetView table{width:100%!important;table-layout:fixed;font-size:11px}
+body.exporting #sheetView th,body.exporting #sheetView td{white-space:normal!important;
+  word-break:break-all;overflow:visible!important;max-width:none!important;padding:3px 5px}
+body.exporting #pdfView canvas{width:100%!important;max-width:100%!important;height:auto!important}
+body.exporting #pptxView{max-width:none}
+/* ============ 打印 / 系统导出 PDF 样式 ============
+   WebView 用 PrintManager 打印时会应用 print media，
+   这里把 UI 全部藏掉、内容展开、宽表格压到页宽，避免右侧被裁。 */
+@media print{
+  #bar,#scrim,#sheet,#fileDrawer,#tocDrawer,#searchBar,#outlinePanel,#busy,#toast,#progress{display:none!important}
+  #scroller{position:static!important;overflow:visible!important;
+    padding-top:0!important;padding-bottom:0!important;height:auto!important}
+  html,body{background:#fff!important;color:#1f2328!important}
+  #content{max-width:none!important;padding:0!important;font-size:12pt!important}
+  #sheetView,#pdfView,#pptxView{overflow:visible!important;padding:0!important}
+  #sheetView table{width:100%!important;table-layout:fixed;font-size:9pt}
+  #sheetView th,#sheetView td{white-space:normal!important;word-break:break-all;
+    overflow:visible!important;max-width:none!important;padding:2px 4px}
+  #pdfView canvas{width:100%!important;max-width:100%!important;height:auto!important}
+  #content pre,#content table{page-break-inside:avoid}
+  #content h1,#content h2,#content h3{page-break-after:avoid}
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<header id="bar">
+  <button id="btnMenu" aria-label="文件列表">☰</button>
+  <div id="title">MD 解读<small>没有打开文件</small></div>
+  <button id="btnSearch" aria-label="搜索">🔍</button>
+  <button id="btnSource" aria-label="切换源码">源码</button>
+  <button id="btnToc" aria-label="目录">目录</button>
+  <button id="btnExport" aria-label="导出">导出</button>
+</header>
+
+<div id="searchBar">
+  <input id="searchInput" type="search" placeholder="在这篇文档里搜…" autocomplete="off">
+  <span id="searchCount">0/0</span>
+  <button id="sPrev">↑</button>
+  <button id="sNext">↓</button>
+  <button id="sClose">✕</button>
+</div>
+
+<div id="scroller">
+  <div id="welcome" class="show">
+    <div class="logo">📄</div>
+    <h1>MD 解读</h1>
+    <p>Markdown、纯文本、Word、PDF、Excel、PPT —— 打开就能读，还能导出成各种格式。</p>
+    <div class="actions">
+      <button id="wOpenFile"><span class="ico">📂</span><span>打开文件<small>md / txt / docx / pdf / xlsx / pptx</small></span></button>
+      <button id="wOpenFolder"><span class="ico">🗂️</span><span>打开文件夹<small>列出里面所有文档</small></span></button>
+      <button id="wOutline"><span class="ico">✏️</span><span>大纲转文档<small>把 DeepSeek 输出的文字变成 Word / Excel / PPT / PDF</small></span></button>
+    </div>
+    <div class="hint" id="wHint"></div>
+  </div>
+  <article id="content" class="markdown-body"></article>
+  <div id="sourceView"></div>
+  <div id="docView" class="markdown-body"></div>
+  <div id="pdfView"></div>
+  <div id="sheetView"></div>
+  <div id="pptxView"></div>
+</div>
+
+<div id="scrim"></div>
+
+<aside id="fileDrawer" class="drawer">
+  <div class="head"><h2>文件</h2><button id="fClose">✕</button></div>
+  <div class="body" id="fileList"><div class="empty">还没有打开文件夹</div></div>
+</aside>
+
+<aside id="tocDrawer" class="drawer">
+  <div class="head"><h2>目录</h2><button id="tClose">✕</button></div>
+  <div class="body" id="tocList"><div class="empty">没有标题</div></div>
+</aside>
+
+<div id="sheet">
+  <div class="grab"></div>
+  <h2>导出与操作</h2>
+  <div class="list">
+    <button class="row" id="exWord"><span class="ico">📘</span><span class="tx">导出 Word (.docx)<small>带标题层级和表格，可继续编辑</small></span></button>
+    <button class="row" id="exExcel"><span class="ico">📗</span><span class="tx">导出 Excel (.xlsx)<small>把文档里的表格提取成工作表</small></span></button>
+    <button class="row" id="exPpt"><span class="ico">📙</span><span class="tx">导出 PPT (.pptx)<small>按文字量自动分页</small></span></button>
+    <button class="row" id="exPdf"><span class="ico">📕</span><span class="tx">导出 PDF<small>A4 分页</small></span></button>
+    <button class="row" id="exHtml"><span class="ico">🌐</span><span class="tx">导出 HTML<small>单文件，样式已内嵌</small></span></button>
+    <button class="row" id="exPng"><span class="ico">🖼️</span><span class="tx">导出长图 PNG<small>整篇一张图，太长自动分段</small></span></button>
+    <button class="row" id="exCopy"><span class="ico">📋</span><span class="tx">复制 Markdown 源码</span></button>
+    <button class="row" id="exShare"><span class="ico">📤</span><span class="tx">分享原文</span></button>
+  </div>
+  <button class="cancel" id="exClose">取消</button>
+</div>
+
+<div id="outlinePanel">
+  <div class="op-head">
+    <button id="opClose">←</button>
+    <h2>大纲转文档</h2>
+    <button id="opPreview">预览</button>
+  </div>
+  <div class="op-hint">把 DeepSeek 输出的文字（Markdown 或「一、二、三」式大纲都行）粘进来，自动识别标题层级、列表、表格。</div>
+  <div class="op-body">
+    <textarea id="opText" placeholder="在这里粘贴大纲…&#10;&#10;例如：&#10;# 项目计划&#10;## 一、背景&#10;- 现状&#10;- 问题&#10;## 二、方案&#10;| 阶段 | 时间 | 负责人 |&#10;| --- | --- | --- |&#10;| 立项 | 3月 | 张三 |"></textarea>
+  </div>
+  <div class="op-foot">
+    <button id="opDocx"><span class="ico">📘</span>Word</button>
+    <button id="opXlsx"><span class="ico">📗</span>Excel</button>
+    <button id="opPptx"><span class="ico">📙</span>PPT</button>
+    <button id="opPdf"><span class="ico">📕</span>PDF</button>
+  </div>
+</div>
+
+<div id="busy"><div class="box"><div class="spin"></div><div class="txt" id="busyTxt">处理中…</div></div></div>
+<div id="toast"></div>
+
+<script src="libs/marked.min.js"></script>
+<script src="libs/purify.min.js"></script>
+<script src="libs/hljs.min.js"></script>
+<script>
+"use strict";
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var NATIVE = (typeof window.MDNative !== "undefined");
+  var state = {
+    files: [], current: null, text: "", kind: "text",
+    source: false, theme: "auto", fs: 17, busy: false,
+    pdfDoc: null, pdfPage: 0, xlsxWb: null, xlsxSheet: 0, hits: [], hitIdx: 0
+  };
+
+  /* ---------- 基础工具 ---------- */
+  function toast(msg, ms){
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove("show"); }, ms || 2600);
+  }
+  function setProgress(p){
+    var el = $("progress");
+    if (p === null){ el.style.opacity = "0"; setTimeout(function(){ el.style.width = "0"; }, 300); return; }
+    el.style.opacity = "1"; el.style.width = Math.max(0, Math.min(100, p)) + "%";
+  }
+  function busy(show, txt){
+    state.busy = !!show;
+    $("busy").classList.toggle("show", !!show);
+    if (txt) $("busyTxt").textContent = txt;
+  }
+  function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  function fmtSize(n){
+    if (n == null || n < 0) return "";
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n/1024).toFixed(1) + " KB";
+    return (n/1048576).toFixed(1) + " MB";
+  }
+  function b64ToU8(b64){
+    var bin = atob(b64.replace(/\s+/g, "")), n = bin.length, out = new Uint8Array(n);
+    for (var i = 0; i < n; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function u8ToB64(u8){
+    var CH = 0x8000, s = "";
+    for (var i = 0; i < u8.length; i += CH)
+      s += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+    return btoa(s);
+  }
+  function utf8ToB64(str){ return u8ToB64(new TextEncoder().encode(str)); }
+  function decodeUtf8(u8){
+    try { return new TextDecoder("utf-8", {fatal:false}).decode(u8); }
+    catch(e){ return ""; }
+  }
+  function extOf(name){
+    var m = String(name || "").toLowerCase().match(/\.([a-z0-9]+)$/);
+    return m ? m[1] : "";
+  }
+
+  /* ---------- 按需加载大库 ---------- */
+  var LIB = {
+    loaded: {},
+    load: function(file){
+      if (this.loaded[file]) return Promise.resolve();
+      var self = this;
+      return new Promise(function(res, rej){
+        var s = document.createElement("script");
+        s.src = "libs/" + file;
+        s.onload = function(){ self.loaded[file] = 1; res(); };
+        s.onerror = function(){ rej(new Error("库加载失败：" + file)); };
+        document.head.appendChild(s);
+      });
+    }
+  };
+  var KIND = {
+    text: ["md","markdown","mdx","mdown","mkd","txt","log","json","csv","tsv","yaml","yml",
+           "xml","html","htm","css","js","ts","jsx","tsx","java","kt","py","go","rs","c","cpp",
+           "h","sh","bat","ini","conf","toml","sql","gradle","properties","gitignore"],
+    docx: ["docx"],
+    pdf:  ["pdf"],
+    xlsx: ["xlsx","xls","csv"],
+    pptx: ["pptx"]
+  };
+  function bytesToLatin1(u8){
+    var CH = 0x8000, s = "";
+    for (var i = 0; i < u8.length; i += CH)
+      s += String.fromCharCode.apply(null, u8.subarray(i, i + CH));
+    return s;
+  }
+  function asciiHas(u8, needle){
+    var n = needle.length, limit = u8.length - n;
+    outer:
+    for (var i = 0; i <= limit; i++){
+      for (var j = 0; j < n; j++){
+        if (u8[i + j] !== needle.charCodeAt(j)) continue outer;
+      }
+      return true;
+    }
+    return false;
+  }
+  /* OLE2(复合文档)的目录项名是 UTF-16LE，每个 ASCII 字符后面跟一个 \x00。
+     "WordDocument" 在 .doc 里是 W\0o\0r\0d\0...，用 asciiHas 永远找不到。 */
+  function utf16Has(u8, needle){
+    var n = needle.length * 2, limit = u8.length - n;
+    outer:
+    for (var i = 0; i <= limit; i++){
+      for (var j = 0; j < needle.length; j++){
+        if (u8[i + j * 2] !== needle.charCodeAt(j)) continue outer;
+        if (u8[i + j * 2 + 1] !== 0) continue outer;
+      }
+      return true;
+    }
+    return false;
+  }
+  /* 看文件头判断真实格式。微信分享过来的文件名经常只剩一串哈希，
+     只能靠内容判断 —— 这是"国家助学金申请表"那次乱码的根因。 */
+  function sniffKind(u8){
+    if (!u8 || u8.length < 8) return "text";
+    if (u8[0] === 0x25 && u8[1] === 0x50 && u8[2] === 0x44 && u8[3] === 0x46) return "pdf";
+    if (u8[0] === 0x50 && u8[1] === 0x4B && u8[2] === 0x03 && u8[3] === 0x04){
+      if (asciiHas(u8, "word/document.xml")) return "docx";
+      if (asciiHas(u8, "xl/workbook.xml")) return "xlsx";
+      if (asciiHas(u8, "ppt/presentation.xml")) return "pptx";
+      if (asciiHas(u8, "opendocument")) return "odt";
+      return "zip";
+    }
+    if (u8[0] === 0xD0 && u8[1] === 0xCF && u8[2] === 0x11 && u8[3] === 0xE0){
+      if (utf16Has(u8, "WordDocument") || asciiHas(u8, "WordDocument")) return "doc";
+      if (utf16Has(u8, "Workbook") || asciiHas(u8, "Workbook")) return "xls";
+      if (utf16Has(u8, "PowerPoint Document") || asciiHas(u8, "PowerPoint Document")) return "ppt";
+      return "ole2";
+    }
+    // RTF 是纯文本格式：{\rtf1 ...
+    if (u8[0] === 0x7B && u8[1] === 0x5C && u8[2] === 0x72 && u8[3] === 0x74) return "rtf";
+    return "text";
+  }
+  function kindOf(name, u8){
+    if (u8 && u8.length > 16){
+      var sniffed = sniffKind(u8);
+      if (sniffed !== "text" && sniffed !== "zip" && sniffed !== "ole2") return sniffed;
+    }
+    var e = extOf(name);
+    for (var k in KIND) if (KIND[k].indexOf(e) >= 0) return k;
+    return "text";
+  }
+
+  /* ---------- 视图切换 ---------- */
+  function showView(which){
+    ["content","sourceView","docView","pdfView","sheetView","pptxView"].forEach(function(id){
+      var el = $(id); if (el) el.classList.remove("show");
+    });
+    var el = $(which); if (el) el.classList.add("show");
+    $("welcome").classList.remove("show");
+    $("scroller").scrollTop = 0;
+  }
+  function resetViews(){
+    ["content","sourceView","docView","pdfView","sheetView","pptxView"].forEach(function(id){
+      var el = $(id); if (el) el.classList.remove("show");
+    });
+    state.pdfDoc = null; state.xlsxWb = null; state.hits = [];
+    if (state.pdfDoc && state.pdfDoc.destroy) { try { state.pdfDoc.destroy(); } catch(e){} }
+  }
+
+  function scrollScroller(top){
+    var el = $("scroller");
+    if (el && el.scrollTo){
+      try { el.scrollTo({ top: top, behavior: "smooth" }); return; } catch(e){}
+    }
+    if (el) el.scrollTop = top;
+  }
+  /* ---------- 标题 / 目录 ---------- */
+  function setTitle(name, extra){
+    var t = $("title");
+    var size = state.text ? new TextEncoder().encode(state.text).length : null;
+    var words = state.text ? state.text.replace(/\s/g, "").length : 0;
+    var sub = [];
+    if (extra) sub.push(extra);
+    if (size != null) sub.push(fmtSize(size));
+    if (words) sub.push(words + " 字");
+    t.innerHTML = esc(name || "未命名") + "<small>" + esc(sub.join(" · ")) + "</small>";
+  }
+  function addHeadingIds(root){
+    var hs = root.querySelectorAll("h1,h2,h3,h4,h5,h6"), used = {};
+    hs.forEach(function(h, i){
+      var slug = (h.textContent || "").trim().toLowerCase()
+        .replace(/[\s\u3000]+/g, "-").replace(/[^\w\u4e00-\u9fa5\-]/g, "").slice(0, 60) || ("sec" + i);
+      if (used[slug]) slug += "-" + (++used[slug]); else used[slug] = 1;
+      h.id = "h-" + slug;
+      h.dataset.lv = h.tagName.substring(1);
+    });
+    return hs;
+  }
+  function buildToc(heads){
+    var box = $("tocList");
+    if (!heads || !heads.length){ box.innerHTML = '<div class="empty">这篇没有标题</div>'; return; }
+    var frag = document.createDocumentFragment();
+    Array.prototype.forEach.call(heads, function(h){
+      var b = document.createElement("button");
+      b.className = "tocitem l" + h.dataset.lv;
+      b.textContent = (h.textContent || "").trim() || "(空标题)";
+      b.onclick = function(){
+        closeDrawers();
+        scrollScroller(h.getBoundingClientRect().top + $("scroller").scrollTop - 70);
+      };
+      frag.appendChild(b);
+    });
+    box.innerHTML = ""; box.appendChild(frag);
+  }
+
+  /* ---------- 公式 / 流程图 / 代码高亮 / 图片 ---------- */
+  function needFormula(text){ return /\$\$[\s\S]{1,8000}?\$\$|\$[^$\n]{1,600}?\$|\\\(|\\\[/.test(text || ""); }
+  function needMermaid(text){ return /```\s*mermaid/i.test(text || ""); }
+
+  function renderMath(root){
+    if (typeof katex === "undefined") return;
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    var nodes = [], n;
+    while ((n = walker.nextNode())) {
+      if (n.parentNode && /^(SCRIPT|STYLE|CODE|PRE|TEXTAREA)$/.test(n.parentNode.tagName)) continue;
+      if (n.nodeValue && n.nodeValue.indexOf("$") >= 0) nodes.push(n);
+    }
+    nodes.forEach(function(node){
+      var s = node.nodeValue, html = "", last = 0, m;
+      var re = /\$\$([\s\S]{1,8000}?)\$\$|\$([^$\n]{1,600}?)\$/g;
+      var ok = false;
+      while ((m = re.exec(s))){
+        ok = true;
+        html += esc(s.slice(last, m.index));
+        var tex = m[1] != null ? m[1] : m[2];
+        var disp = m[1] != null;
+        try {
+          html += katex.renderToString(tex, {displayMode: disp, throwOnError: false});
+        } catch(e){ html += esc(m[0]); }
+        last = m.index + m[0].length;
+      }
+      if (!ok) return;
+      html += esc(s.slice(last));
+      var span = document.createElement("span");
+      span.innerHTML = html;
+      node.parentNode.replaceChild(span, node);
+    });
+  }
+
+  function renderMermaid(root){
+    if (typeof mermaid === "undefined") return Promise.resolve();
+    var blocks = root.querySelectorAll("pre > code.language-mermaid, pre > code.hljs.language-mermaid");
+    if (!blocks.length) return Promise.resolve();
+    Array.prototype.forEach.call(blocks, function(code, i){
+      var src = code.textContent || "";
+      var pre = code.parentNode;
+      var box = document.createElement("div");
+      box.className = "mermaid-box";
+      box.id = "mmd-" + i + "-" + Date.now();
+      var id = box.id;
+      pre.parentNode.replaceChild(box, pre);
+      try {
+        mermaid.render(id + "-svg", src).then(function(res){
+          box.innerHTML = res.svg || "";
+        }).catch(function(){
+          box.innerHTML = '<pre class="hljs"><code>' + esc(src) + '</code></pre>';
+        });
+      } catch(e){
+        box.innerHTML = '<pre class="hljs"><code>' + esc(src) + '</code></pre>';
+      }
+    });
+    return Promise.resolve();
+  }
+
+  function highlightAll(root){
+    if (typeof hljs === "undefined") return;
+    root.querySelectorAll("pre code").forEach(function(b){
+      if (b.className && b.className.indexOf("language-mermaid") >= 0) return;
+      try { hljs.highlightElement(b); } catch(e){}
+    });
+  }
+  function fixImages(root){
+    root.querySelectorAll("img").forEach(function(img){
+      img.loading = "lazy";
+      img.addEventListener("error", function(){
+        img.classList.add("missing");
+        img.alt = "图片无法加载：" + (img.getAttribute("alt") || img.getAttribute("src") || "未知路径");
+      });
+    });
+  }
+
+  /* ---------- md 里的本地图片：交给 Java 读文件（WebView 访问不到 /sdcard） ---------- */
+  var __baseDir = null, __assetSeq = 0;
+  window.__setBaseDir = function(dir){ __baseDir = dir || null; };
+  function joinPath(dir, rel){
+    var parts = String(dir + "/" + rel).split("/");
+    var out = [];
+    for (var i = 0; i < parts.length; i++){
+      var p = parts[i];
+      if (p === "..") out.pop();
+      else if (p && p !== ".") out.push(p);
+    }
+    return "/" + out.join("/");
+  }
+  function resolveLocalImages(root){
+    if (!root || !NATIVE || !MDNative.readAssetImage || !__baseDir) return;
+    root.querySelectorAll("img").forEach(function(img){
+      var src = img.getAttribute("src") || "";
+      if (!src || /^(https?:|data:|blob:|content:)/i.test(src)) return;
+      var full = src.charAt(0) === "/" ? src : joinPath(__baseDir, src);
+      var id = "as" + (++__assetSeq);
+      img.setAttribute("data-asset-id", id);
+      img.setAttribute("data-orig-src", src);
+      try { MDNative.readAssetImage(full, id); } catch(e){}
+    });
+  }
+  window.__assetB64 = function(id, dataUrl){
+    var img = document.querySelector('img[data-asset-id="' + id + '"]');
+    if (!img) return;
+    if (dataUrl){
+      img.src = dataUrl;
+      img.classList.remove("missing");
+    } else {
+      img.classList.add("missing");
+      img.alt = "图片读取失败：" + (img.getAttribute("data-orig-src") || "");
+    }
+  };
+
+  /* ---------- 渲染：Markdown / 纯文本 ---------- */
+  function renderRich(text, name, asMarkdown, rawHtml){
+    state.text = text;
+    state.current = { name: name || "未命名.md" };
+    state.kind = "text";
+    var html;
+    if (rawHtml != null) {
+      html = rawHtml;
+    } else if (asMarkdown !== false) {
+      try { html = marked.parse(text); } catch(e){ html = "<pre>" + esc(text) + "</pre>"; }
+      try { html = DOMPurify.sanitize(html, { ADD_ATTR: ["id","class","checked","disabled","align","start"] }); } catch(e){}
+    } else {
+      html = "<pre>" + esc(text) + "</pre>";
+    }
+    $("content").innerHTML = html;
+    $("docView").innerHTML = "";
+    showView("content");
+    var heads = addHeadingIds($("content"));
+    buildToc(heads);
+    var chain = Promise.resolve();
+    // 纯文本 / .doc 渲染（rawHtml 已给定）不做公式和流程图解析：
+    // 文档正文里的 $ 、\ 会被 KaTeX 误当成公式，刷一堆 LaTeX 警告甚至吃字
+    if (rawHtml == null){
+      if (needFormula(text)) chain = chain.then(function(){ return LIB.load("katex.min.js"); });
+      if (needMermaid(text)) chain = chain.then(function(){ return LIB.load("mermaid.min.js"); });
+    }
+    chain.then(function(){
+      try { renderMath($("content")); } catch(e){}
+      return renderMermaid($("content"));
+    }).catch(function(e){ toast("图形/公式渲染失败：" + e.message, 3200); })
+      .then(function(){
+        highlightAll($("content"));
+        fixImages($("content"));
+        resolveLocalImages($("content"));
+        setTitle(name);
+        $("progress").style.opacity = "0";
+        updateSourceButton();
+      });
+  }
+  function updateSourceButton(){
+    $("btnSource").style.display = state.kind === "text" ? "" : "none";
+  }
+  function showSource(on){
+    if (state.kind !== "text") return;
+    state.source = !!on;
+    $("btnSource").classList.toggle("on", state.source);
+    if (state.source){
+      $("sourceView").textContent = state.text;
+      showView("sourceView");
+    } else {
+      showView("content");
+    }
+  }
+
+  /* ==================== 多格式渲染 ==================== */
+
+  function renderDocx(u8, name){
+    busy(true, "解析 Word…");
+    LIB.load("mammoth.js").then(function(){
+      // 图片内联：超过 400KB 的 base64 自动缩到 1000px 宽（原始大图会撑爆内存/卡死）
+      var imgConverter = (mammoth.images && mammoth.images.imgElement) ? mammoth.images.imgElement(function(image){
+        return image.read("base64").then(function(b64){
+          return new Promise(function(resolve){
+            var raw = "data:" + (image.contentType || "image/png") + ";base64," + b64;
+            if (b64.length < 400000) { resolve({ src: raw }); return; }
+            try {
+              var im = new Image();
+              im.onload = function(){
+                try {
+                  var maxW = 1000;
+                  var scale = Math.min(1, maxW / im.width);
+                  if (scale >= 1) { resolve({ src: raw }); return; }
+                  var cv = document.createElement("canvas");
+                  cv.width = Math.max(1, Math.round(im.width * scale));
+                  cv.height = Math.max(1, Math.round(im.height * scale));
+                  cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+                  resolve({ src: cv.toDataURL("image/jpeg", 0.85) });
+                } catch(e){ resolve({ src: raw }); }
+              };
+              im.onerror = function(){ resolve({ src: raw }); };
+              im.src = raw;
+            } catch(e){ resolve({ src: raw }); }
+          });
+        });
+      }) : null;
+      return mammoth.convertToHtml({ arrayBuffer: u8.buffer }, {
+        styleMap: ["p[style-name='Title'] => h1:fresh", "p[style-name='Heading 1'] => h1:fresh",
+                   "p[style-name='Heading 2'] => h2:fresh", "p[style-name='Heading 3'] => h3:fresh"],
+        convertImage: imgConverter || undefined
+      });
+    }).then(function(r){
+      var html = (r && r.value) || "";
+      try { html = DOMPurify.sanitize(html, { ADD_ATTR: ["id","class","align","colspan","rowspan","width","height"] }); } catch(e){}
+      $("docView").innerHTML = html || "<p>（这个 Word 里没有可显示的正文）</p>";
+      state.text = $("docView").innerText || "";
+      state.current = { name: name };
+      state.kind = "docx";
+      showView("docView");
+      var heads = addHeadingIds($("docView"));
+      buildToc(heads);
+      fixImages($("docView"));
+      resolveLocalImages($("docView"));
+      setTitle(name, "Word");
+      updateSourceButton();
+      $("progress").style.opacity = "0";
+    }).catch(function(e){
+      toast("Word 解析失败：" + (e.message || e), 4200);
+    }).then(function(){ busy(false); });
+  }
+
+  /* ---- Word 97-2003 (.doc)：OLE2 → FIB → Clx(piece table) → 全文 + 表格重建 ----
+     fcMin..fcMac 只能拿到非 FastSave 的连续文本，且表格会塌成一行；
+     完整做法是解析 Clx 里的 piece table（FastSave 文档的文本是碎片化的）。 */
+  function docR32(u, o){ return (u[o] | (u[o+1] << 8) | (u[o+2] << 16) | (u[o+3] << 24)) >>> 0; }
+  function docR16(u, o){ return (u[o] | (u[o+1] << 8)) >>> 0; }
+
+  function parseDocPieces(wd, tbl){
+    if (!tbl) return null;
+    var fcClx = docR32(wd, 0x01A2);
+    var lcbClx = docR32(wd, 0x01A6);
+    if (fcClx <= 0 || lcbClx <= 0) return null;
+    if (fcClx + lcbClx > tbl.length) return null;
+    var end = fcClx + lcbClx, p = fcClx;
+    // 跳过前置的 Prc 块（0x01 + 2字节长度 + 数据）
+    while (p + 3 <= end && tbl[p] === 0x01){
+      p += 3 + docR16(tbl, p + 1);
+    }
+    if (p + 5 > end || tbl[p] !== 0x02) return null;
+    var lcb = docR32(tbl, p + 1);
+    var plc = p + 5;
+    if (lcb < 16 || plc + lcb > tbl.length) return null;
+    var n = Math.floor((lcb - 4) / 12);
+    if (n <= 0 || n > 2000000) return null;
+    var pieces = [];
+    for (var i = 0; i < n; i++){
+      var cpStart = docR32(tbl, plc + i * 4);
+      var cpEnd = docR32(tbl, plc + (i + 1) * 4);
+      var off = plc + (n + 1) * 4 + i * 8;
+      if (off + 8 > tbl.length) break;
+      var fcRaw = docR32(tbl, off + 2);
+      var compressed = (fcRaw & 0x40000000) !== 0;
+      var fc = (fcRaw & 0x3FFFFFFF) >>> 0;
+      if (compressed) fc = Math.floor(fc / 2);
+      pieces.push({ cpStart: cpStart, cpEnd: cpEnd, fc: fc, compressed: compressed });
+    }
+    return pieces.length ? pieces : null;
+  }
+
+  function decodeDocPiece(wd, fc, len, compressed){
+    if (compressed){
+      var bytes = wd.subarray(fc, fc + len);
+      try { return new TextDecoder("gbk").decode(bytes); }
+      catch(e){
+        var s = "";
+        for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+        return s;
+      }
+    }
+    return new TextDecoder("utf-16le").decode(wd.subarray(fc, fc + len * 2));
+  }
+
+  function docPrintableRatio(s){
+    var ok = 0, total = 0;
+    for (var i = 0; i < s.length; i++){
+      var c = s.charCodeAt(i);
+      total++;
+      if (c === 9 || c === 10 || c === 13) { ok++; continue; }
+      if (c < 0x20) continue;
+      if (c === 0xFFFD || (c >= 0xE000 && c <= 0xF8FF)) continue;
+      ok++;
+    }
+    return total ? ok / total : 0;
+  }
+
+  function extractDocText(wd, tbl){
+    // 主路径：fcMin..fcMac 覆盖整个文本区（正文 + 页眉脚注 + 多 story），内容最全
+    var byRange = "";
+    var fcMin = docR32(wd, 0x18), fcMac = docR32(wd, 0x1C);
+    if (fcMac > fcMin && fcMac <= wd.length){
+      try { byRange = new TextDecoder("utf-16le").decode(wd.subarray(fcMin, fcMac)); } catch(e){}
+    }
+    // 备用：piece table（FastSave 文档的文本是按 piece 存放的，范围提取会乱序）
+    var byPieces = "";
+    var pieces = parseDocPieces(wd, tbl);
+    if (pieces){
+      for (var i = 0; i < pieces.length; i++){
+        var p = pieces[i];
+        var len = p.cpEnd - p.cpStart;
+        if (len <= 0 || len > 50000000) continue;
+        try { byPieces += decodeDocPiece(wd, p.fc, len, p.compressed); } catch(e){}
+      }
+    }
+    var la = byRange.replace(/[\s\u0000]/g, "").length;
+    var lb = byPieces.replace(/[\s\u0000]/g, "").length;
+    var ra = docPrintableRatio(byRange);
+    // 内容优先：范围提取字数不少于 piece table 就用它（可能含页眉脚注，但正文不会丢）；
+    // 只有明显更少/大面积乱码时才退到 piece table（FastSave 场景）
+    if (la > 2 && (la >= lb || ra >= 0.85)) return byRange;
+    if (lb > 2) return byPieces;
+    return byRange || byPieces;
+  }
+
+  /* 把 .doc 文本流转成 HTML。
+     Word 的结构：0x07 = 单元格结束，0x07 0x07 = 行结束，0x0D = 段落符——
+     但段落符也会出现在单元格内部（如 "内容切合度\r（30分）"），
+     所以不能先按段落切分，必须直接按 0x07 0x07 切行。 */
+  function docClean(s){
+    return String(s || "")
+      .replace(/[\u0000-\u0006\u0008\u000B\u000C\u000E-\u001F]/g, "")
+      .replace(/\r/g, " ")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
+  }
+  /* 启发式标题判断：绕开 WPS 不标准的 STSH，用文本自身特征识别小标题 */
+  function looksLikeHeading(t){
+    var s = String(t || "").trim();
+    if (!s || s.length > 30) return false;
+    if (/^[一二三四五六七八九十百]+[、.．]/.test(s)) return true;
+    if (/^[（(][一二三四五六七八九十]+[）)]/.test(s)) return true;
+    if (/^第[一二三四五六七八九十百\d]+[章节讲部分]/.test(s)) return true;
+    if (/^\d+[.、．]\s*\S/.test(s) && s.length <= 22) return true;
+    if (/^(附件|附录|前言|引言|结语|总结|目录|方案|目的|背景|范围|职责|流程|要求|注意|说明|活动主题|活动宗旨|活动内容|活动对象|活动时间|活动要求)/.test(s) && s.length <= 24) return true;
+    // 短行且不以标点结尾 → 大概率是小标题
+    if (s.length <= 18 && !/[。！？；，、：]$/.test(s) && !/\d$/.test(s)) return true;
+    return false;
+  }
+  function docTextToHtml(text){
+    /* 状态机逐字符扫描：0x07=单元格结束，0x07 0x07=行结束，0x0D=段落符。
+       早期用 split("\u0007\u0007") 切行是错的——`␇␇性别␇␇` 切出来的中间段
+       不含分隔符，会被误判成普通段落（复杂表格就这样被打散成碎片）。 */
+    var blocks = [], cells = [], buf = "", inCellRow = false;
+
+    function pushRow(){
+      if (buf.length) { cells.push(buf.trim()); buf = ""; }
+      else if (cells.length) { cells.push(""); }
+      if (cells.some(function(c){ return !!c; })){
+        blocks.push({ type: "row", cells: cells.slice() });
+      }
+      cells = [];
+      inCellRow = false;
+    }
+    function pushPara(){
+      var t = docClean(buf);
+      buf = "";
+      if (t) blocks.push({ type: "p", text: t });
+    }
+
+    for (var i = 0; i < text.length; i++){
+      var ch = text[i];
+      if (ch === "\u0007"){
+        if (text[i + 1] === "\u0007"){
+          pushRow();
+          i++;
+        } else {
+          cells.push(buf.trim());
+          buf = "";
+          inCellRow = true;
+        }
+      } else if (ch === "\r"){
+        if (inCellRow){ buf += " "; }
+        else { pushPara(); }
+      } else {
+        buf += ch;
+      }
+    }
+    if (cells.length || inCellRow) pushRow(); else pushPara();
+
+    var html = [], rows = [];
+    function flush(){
+      if (!rows.length) return;
+      // 列数取众数：短行（合并单元格）补空，超宽行截断
+      // 列数 = 「出现 >=2 次的最大列数」：
+      // 只出现 1 次的超大列数是假列（Word 里偶发的多余 0x07），
+      // 而众数又会被合并单元格的 1 格行带偏成 1 列。
+      var counts = {};
+      rows.forEach(function(r){ counts[r.length] = (counts[r.length] || 0) + 1; });
+      var maxCols = 1;
+      // 阈值：至少出现 2 次，且不少于总行数的 15%——既排除偶发假列，也排除只出现两次的噪声
+      var need = Math.max(2, Math.ceil(rows.length * 0.15));
+      for (var ck in counts){
+        var cn = parseInt(ck, 10);
+        if (counts[ck] >= need && cn > maxCols && cn <= 12) maxCols = cn;
+      }
+      if (maxCols === 1 && rows.length){
+        var mx = 0;
+        rows.forEach(function(r){ if (r.length > mx) mx = r.length; });
+        maxCols = Math.min(Math.max(mx, 1), 8);
+      }
+      html.push("<table>");
+      rows.forEach(function(r, ri){
+        var tag = ri === 0 ? "th" : "td";
+        var line = [];
+        for (var c = 0; c < maxCols; c++) line.push("<" + tag + ">" + esc(r[c] || "") + "</" + tag + ">");
+        html.push("<tr>" + line.join("") + "</tr>");
+      });
+      html.push("</table>");
+      rows = [];
+    }
+    blocks.forEach(function(b){
+      if (b.type === "row"){ rows.push(b.cells); return; }
+      flush();
+      if (looksLikeHeading(b.text)) {
+        html.push('<p class="doc-heading"><strong>' + esc(b.text) + "</strong></p>");
+      } else {
+        html.push("<p>" + esc(b.text) + "</p>");
+      }
+    });
+    flush();
+    return html.join("");
+  }
+
+  /* .doc 的图片：Word 97 把图存在 Data 流（小图也可能在 WordDocument 流），
+     用 JPEG/PNG 魔数扫描提取。位置拿不到，统一附在文末。 */
+  function scanStreamImages(bytes){
+    var out = [], i = 0, n = bytes.length;
+    while (i < n - 8 && out.length < 30){
+      if (bytes[i] === 0xFF && bytes[i + 1] === 0xD8 && bytes[i + 2] === 0xFF){
+        var end = -1;
+        for (var j = i + 2; j < n - 1; j++){
+          if (bytes[j] === 0xFF && bytes[j + 1] === 0xD9){ end = j + 2; break; }
+        }
+        if (end > i + 200 && end - i <= 12 * 1024 * 1024){
+          out.push({ type: "image/jpeg", data: bytes.subarray(i, end) });
+          i = end; continue;
+        }
+      }
+      if (bytes[i] === 0x89 && bytes[i + 1] === 0x50 && bytes[i + 2] === 0x4E && bytes[i + 3] === 0x47){
+        var endP = -1;
+        for (var k = i + 4; k < n - 8; k++){
+          if (bytes[k] === 0x49 && bytes[k + 1] === 0x45 && bytes[k + 2] === 0x4E && bytes[k + 3] === 0x44){
+            endP = k + 8; break;
+          }
+        }
+        if (endP > i + 200 && endP - i <= 12 * 1024 * 1024){
+          out.push({ type: "image/png", data: bytes.subarray(i, endP) });
+          i = endP; continue;
+        }
+      }
+      i++;
+    }
+    return out;
+  }
+  function extractDocImages(cfb, wd){
+    var streams = [];
+    for (var i = 0; i < cfb.FullPaths.length; i++){
+      if (/\/Data$/i.test(cfb.FullPaths[i] || "")){
+        streams.push(new Uint8Array(cfb.FileIndex[i].content));
+        break;
+      }
+    }
+    streams.push(wd);
+    var imgs = [];
+    streams.forEach(function(s){
+      try { imgs = imgs.concat(scanStreamImages(s)); } catch(e){}
+    });
+    var seen = {}, uniq = [];
+    imgs.forEach(function(im){
+      var key = im.type + ":" + im.data.length;
+      if (seen[key]) return;
+      seen[key] = 1;
+      uniq.push(im);
+    });
+    return uniq.slice(0, 20);
+  }
+
+  function renderDoc(u8, name){
+    busy(true, "解析 Word 97 文档…");
+    return LIB.load("xlsx.full.min.js").then(function(){
+      if (!window.XLSX || !XLSX.CFB) throw new Error("OLE2 解析器未就绪");
+      var cfb = XLSX.CFB.read(u8, { type: "array" });
+      var wdIdx = -1, t1Idx = -1, t0Idx = -1;
+      for (var i = 0; i < cfb.FullPaths.length; i++){
+        var fp = cfb.FullPaths[i] || "";
+        if (/WordDocument$/i.test(fp)) wdIdx = i;
+        else if (/\/1Table$/i.test(fp)) t1Idx = i;
+        else if (/\/0Table$/i.test(fp)) t0Idx = i;
+      }
+      if (wdIdx < 0) throw new Error("这不是一份能解析的 Word 文档");
+      var wd = new Uint8Array(cfb.FileIndex[wdIdx].content);
+      // FIB flags 的 bit9 = fWhichTblStm，决定 Clx 在 1Table 还是 0Table
+      var flags = docR16(wd, 0x0A);
+      var useIdx = (flags & 0x0200) !== 0 ? t1Idx : t0Idx;
+      if (useIdx < 0) useIdx = t1Idx >= 0 ? t1Idx : t0Idx;
+      var tbl = useIdx >= 0 ? new Uint8Array(cfb.FileIndex[useIdx].content) : null;
+      var text = extractDocText(wd, tbl);
+      if (!text || text.replace(/\s/g, "").length < 2) throw new Error("没能从这份 .doc 里提取到文字");
+      var html = docTextToHtml(text);
+      var docImgs = extractDocImages(cfb, wd);
+      if (docImgs.length){
+        html += '<h2>文档中的图片（' + docImgs.length + ' 张）</h2>';
+        docImgs.forEach(function(im, i){
+          var b64 = u8ToB64(im.data);
+          html += '<div style="margin:14px 0"><img alt="文档图片 ' + (i + 1) + '" src="data:' + im.type +
+            ';base64,' + b64 + '" style="max-width:100%;height:auto;border-radius:6px"></div>';
+        });
+      }
+      state.kind = "text";
+      state.current = { name: name };
+      var plain = text.replace(/\u0007/g, " | ").replace(/[\u0000-\u0008\u000E-\u001F]/g, "");
+      renderRich(plain, name, false, html);
+      $("progress").style.opacity = "0";
+      busy(false);
+    }).catch(function(e){
+      busy(false);
+      showUnsupported(name, "Word 97 (.doc)", e.message);
+    });
+  }
+  function showUnsupported(name, label, detail){
+    state.kind = "text";
+    state.text = "";
+    state.current = { name: name };
+    var html = '<div style="padding:40px 8px;text-align:center;color:var(--muted)">' +
+      "<div style=\"font-size:40px;margin-bottom:14px\">📄</div>" +
+      "<h2 style=\"margin:0 0 10px;color:var(--fg)\">" + esc(label || "暂不支持") + "</h2>" +
+      "<p style=\"font-size:14px;line-height:1.8;max-width:420px;margin:0 auto\">" +
+      "这个格式暂时不能在 App 里直接渲染" + (detail ? "（" + esc(detail) + "）" : "") + "。<br>" +
+      "可以先在 WPS / Word 里另存为 .docx 或 .pdf，再打开。" +
+      "</p></div>";
+    $("content").innerHTML = html;
+    $("docView").innerHTML = "";
+    showView("content");
+    $("tocList").innerHTML = '<div class="empty">没有标题</div>';
+    setTitle(name, label);
+    updateSourceButton();
+    $("progress").style.opacity = "0";
+    busy(false);
+  }
+
+  /* ---------- PDF：系统 PdfRenderer 渲染，连续滚动显示全部页 ---------- */
+  var pdfState = { path: null, page: 0, total: 0, loaded: {} };
+  window.__pdfReady = function(path, name){
+    pdfState = { path: path, page: 0, total: 0, loaded: {} };
+    state.kind = "pdf";
+    state.current = { name: name };
+    state.text = "";
+    $("pdfView").innerHTML =
+      '<div class="pbar"><span id="pdfInfo" style="font-size:13px;color:var(--muted)">加载中…</span>' +
+      '<button id="pdfSave">导出长图</button></div><div id="pdfPages"></div>';
+    showView("pdfView");
+    setTitle(name, "PDF");
+    updateSourceButton();
+    $("pdfSave").onclick = function(){
+      // PDF 的长图由 Java 侧全页渲染拼接，不经过 WebView 截图
+      if (NATIVE && MDNative.exportPdfLongImage && pdfState.path){
+        var nm = (state.current.name || "document").replace(/\.pdf$/i, "") + ".png";
+        MDNative.exportPdfLongImage(pdfState.path, nm);
+      } else {
+        exportCurrentPng();
+      }
+    };
+    requestPdfPage(0);
+  };
+  function requestPdfPage(idx){
+    if (!NATIVE || !MDNative.renderPdfPage) { toast("当前环境不支持原生 PDF 渲染"); return; }
+    if (!pdfState.path){ toast("PDF 路径丢失，请重新打开"); return; }
+    if (pdfState.loaded[idx]) return;
+    pdfState.loaded[idx] = 1;
+    // 用屏幕物理分辨率 ×1.2 渲染，保证清晰度（之前按 CSS 宽 ×2 只有 800px，糊）
+    var w = Math.round(window.innerWidth * (window.devicePixelRatio || 2) * 1.2);
+    busy(true, "渲染第 " + (idx + 1) + " 页…");
+    MDNative.renderPdfPage(pdfState.path, idx, w);
+  }
+  window.__pdfPage = function(index, total, b64){
+    pdfState.page = index;
+    pdfState.total = total;
+    busy(false);
+    var box = $("pdfPages");
+    if (!box) return;
+    var wrap = document.createElement("div");
+    wrap.style.marginBottom = "12px";
+    wrap.innerHTML = '<img alt="PDF 第 ' + (index + 1) + ' 页" src="data:image/jpeg;base64,' + b64 +
+      '" style="width:100%;max-width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px;background:#fff">' +
+      '<div style="text-align:center;font-size:11.5px;color:var(--muted);margin-top:4px">第 ' +
+      (index + 1) + " / " + total + " 页</div>";
+    box.appendChild(wrap);
+    var info = $("pdfInfo");
+    if (info) info.textContent = (index + 1) + " / " + total + " 页";
+    setTitle(state.current.name, "PDF · " + total + " 页");
+    $("progress").style.opacity = "0";
+    // 连续加载后续页（上限 60 页，避免超大文档卡死）
+    if (index + 1 < total && index < 59) {
+      setTimeout(function(){ requestPdfPage(index + 1); }, 120);
+    } else if (index + 1 < total) {
+      toast("页数较多，仅加载前 60 页");
+    }
+  };
+  window.__pdfError = function(msg){
+    busy(false);
+    var box = $("pdfPages");
+    if (box) box.innerHTML = '<div style="padding:30px;color:var(--muted);font-size:14px">PDF 渲染失败：' + esc(msg) + "</div>";
+    toast("PDF 渲染失败：" + msg, 5200);
+  };
+
+  function renderPdf(u8, name){
+    busy(true, "渲染 PDF…");
+    LIB.load("pdf.min.js").then(function(){
+      if (!window.pdfjsLib) throw new Error("pdf.js 未就绪");
+      try { pdfjsLib.GlobalWorkerOptions.workerSrc = "libs/pdf.worker.min.js"; } catch(e){}
+      var data = u8.slice();
+      var base = {
+        data: data,
+        cMapUrl: "libs/cmaps/",
+        cMapPacked: true,
+        standardFontDataUrl: "libs/standard_fonts/"
+      };
+      function withWorker(extra){
+        var o = {};
+        for (var k in base) o[k] = base[k];
+        if (extra) for (var k2 in extra) o[k2] = extra[k2];
+        return o;
+      }
+      return pdfjsLib.getDocument(withWorker()).promise.catch(function(){
+        // file:// 下 Worker 可能被拦，退回主线程解析（仍带 CMap）
+        return pdfjsLib.getDocument(withWorker({ disableWorker: true })).promise;
+      });
+    }).then(function(doc){
+      state.pdfDoc = doc;
+      state.kind = "pdf";
+      state.current = { name: name };
+      state.text = "";
+      state.pdfPage = 0;
+      $("pdfView").innerHTML =
+        '<div class="pbar"><button id="pdfPrev">上一页</button>' +
+        '<span id="pdfInfo" style="font-size:13px;color:var(--muted)">1 / ' + doc.numPages + '</span>' +
+        '<button id="pdfNext">下一页</button>' +
+        '<button id="pdfSave">导出长图</button></div><div id="pdfPages"></div>';
+      showView("pdfView");
+      setTitle(name, "PDF · " + doc.numPages + " 页");
+      updateSourceButton();
+      bindPdfBar();
+      renderPdfPage(0);
+      $("progress").style.opacity = "0";
+    }).catch(function(e){
+      toast("PDF 渲染失败：" + (e.message || e), 4600);
+    }).then(function(){ busy(false); });
+  }
+
+  function renderPdfPage(idx){
+    var doc = state.pdfDoc;
+    if (!doc) return;
+    busy(true, "渲染第 " + (idx + 1) + " 页…");
+    doc.getPage(idx + 1).then(function(page){
+      var vp1 = page.getViewport({ scale: 1 });
+      var maxW = Math.min(window.innerWidth - 24, 900);
+      var dpr = window.devicePixelRatio || 1;
+      var scale = maxW / vp1.width;
+      // 关键：单张 canvas 不能太大，Chromium 图层内存超限会直接不绘制（白屏）
+      var MAX_PIXELS = 1600 * 2000;
+      var s = scale * Math.min(dpr, 2);
+      var vp = page.getViewport({ scale: s });
+      var guard = 0;
+      while (vp.width * vp.height > MAX_PIXELS && guard++ < 30) {
+        s *= 0.88;
+        vp = page.getViewport({ scale: s });
+      }
+      var cv = document.createElement("canvas");
+      cv.width = Math.floor(vp.width);
+      cv.height = Math.floor(vp.height);
+      cv.style.width = Math.floor(vp.width / Math.min(dpr, 2)) + "px";
+      var ctx = cv.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+      page.render({ canvasContext: ctx, viewport: vp }).promise.then(function(){
+        var box = $("pdfPages");
+        box.innerHTML = "";
+        box.appendChild(cv);
+        var pn = document.createElement("div");
+        pn.className = "pageno";
+        pn.textContent = "第 " + (idx + 1) + " / " + doc.numPages + " 页";
+        box.appendChild(pn);
+        state.pdfPage = idx;
+        var info = $("pdfInfo");
+        if (info) info.textContent = (idx + 1) + " / " + doc.numPages;
+        $("scroller").scrollTop = 0;
+        busy(false);
+      });
+    }).catch(function(e){
+      busy(false); toast("PDF 页渲染失败：" + (e.message || e));
+    });
+  }
+  function bindPdfBar(){
+    $("pdfPrev").onclick = function(){ if (state.pdfPage > 0) renderPdfPage(state.pdfPage - 1); };
+    $("pdfNext").onclick = function(){ if (state.pdfDoc && state.pdfPage < state.pdfDoc.numPages - 1) renderPdfPage(state.pdfPage + 1); };
+    $("pdfSave").onclick = function(){ exportCurrentPng(); };
+  }
+
+  function renderXlsx(u8, name){
+    busy(true, "解析 Excel…");
+    LIB.load("xlsx.full.min.js").then(function(){
+      var wb = (window.XLSX || {}).read ? XLSX.read(u8, { type: "array" }) : null;
+      if (!wb) throw new Error("SheetJS 未就绪");
+      state.xlsxWb = wb;
+      state.kind = "xlsx";
+      state.current = { name: name };
+      state.text = "";
+      renderSheetTabs();
+      renderSheet(0);
+      showView("sheetView");
+      setTitle(name, "Excel · " + wb.SheetNames.length + " 个工作表");
+      updateSourceButton();
+      $("progress").style.opacity = "0";
+    }).catch(function(e){
+      toast("Excel 解析失败：" + (e.message || e), 4200);
+    }).then(function(){ busy(false); });
+  }
+  function renderSheetTabs(){
+    var wb = state.xlsxWb, box = $("sheetView");
+    var tabs = '<div class="sheet-tabs">';
+    wb.SheetNames.forEach(function(n, i){
+      tabs += '<button data-i="' + i + '" class="' + (i === 0 ? "on" : "") + '">' + esc(n) + '</button>';
+    });
+    tabs += '</div><div id="sheetBody"></div>';
+    box.innerHTML = tabs;
+    box.querySelectorAll(".sheet-tabs button").forEach(function(b){
+      b.onclick = function(){
+        box.querySelectorAll(".sheet-tabs button").forEach(function(x){ x.classList.remove("on"); });
+        b.classList.add("on");
+        renderSheet(parseInt(b.dataset.i, 10));
+      };
+    });
+  }
+  function renderSheet(i){
+    var wb = state.xlsxWb;
+    var ws = wb.Sheets[wb.SheetNames[i]];
+    var html = XLSX.utils.sheet_to_html(ws, { editable: false });
+    var body = $("sheetBody");
+    if (body) body.innerHTML = html;
+    state.xlsxSheet = i;
+  }
+
+  /* 通用：把超大的 base64 图片缩到 maxW 宽（防止几百 MB 字符串撑爆 WebView） */
+  function shrinkDataUrl(src, maxW, quality){
+    return new Promise(function(resolve){
+      if (!src || src.length < 400000) { resolve(src); return; }
+      try {
+        var im = new Image();
+        im.onload = function(){
+          try {
+            var w = maxW || 1000;
+            var scale = Math.min(1, w / im.width);
+            if (scale >= 1) { resolve(src); return; }
+            var cv = document.createElement("canvas");
+            cv.width = Math.max(1, Math.round(im.width * scale));
+            cv.height = Math.max(1, Math.round(im.height * scale));
+            cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+            resolve(cv.toDataURL("image/jpeg", quality || 0.85));
+          } catch(e){ resolve(src); }
+        };
+        im.onerror = function(){ resolve(src); };
+        im.src = src;
+      } catch(e){ resolve(src); }
+    });
+  }
+
+  /* pptx 的图片：slide XML 里 <a:blip r:embed="rIdN">，经 slide rels 映射到 ../media/xxx */
+  function pptxResolvePath(slidePath, target){
+    var base = slidePath.substring(0, slidePath.lastIndexOf("/"));
+    var parts = (base + "/" + target).split("/");
+    var out = [];
+    for (var i = 0; i < parts.length; i++){
+      var p = parts[i];
+      if (p === "..") out.pop();
+      else if (p && p !== ".") out.push(p);
+    }
+    return out.join("/");
+  }
+  function pptxCollectImages(xml, relsXml, zip, slidePath){
+    var rels = {}, re = /<Relationship\b[^>]*>/g, rm;
+    while ((rm = re.exec(relsXml || ""))){
+      var tag = rm[0];
+      var idm = tag.match(/Id="([^"]+)"/), tgm = tag.match(/Target="([^"]+)"/);
+      if (idm && tgm) rels[idm[1]] = tgm[1];
+    }
+    var ids = [], bre = /<a:blip[^>]*r:embed="([^"]+)"/g, bm;
+    while ((bm = bre.exec(xml))) if (ids.indexOf(bm[1]) < 0) ids.push(bm[1]);
+    return Promise.all(ids.map(function(id){
+      var tgt = rels[id];
+      if (!tgt) return Promise.resolve(null);
+      var path = pptxResolvePath(slidePath, tgt);
+      var f = zip.file(path);
+      if (!f) return Promise.resolve(null);
+      var mime = /\.png$/i.test(path) ? "image/png" : /\.gif$/i.test(path) ? "image/gif" : "image/jpeg";
+      return f.async("base64").then(function(b64){
+        return shrinkDataUrl("data:" + mime + ";base64," + b64, 900, 0.85);
+      }).catch(function(){ return null; });
+    })).then(function(list){ return list.filter(Boolean); });
+  }
+
+  function extractPptxText(xml){
+    var out = [], re = /<a:t>([\s\S]*?)<\/a:t>/g, m;
+    while ((m = re.exec(xml))){
+      var s = m[1]
+        .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+      if (s.trim()) out.push(s.trim());
+    }
+    return out;
+  }
+  function renderPptx(u8, name){
+    busy(true, "解析 PPT…");
+    LIB.load("jszip.min.js").then(function(){
+      return JSZip.loadAsync(u8);
+    }).then(function(zip){
+      var list = [];
+      zip.forEach(function(path){
+        var m = path.match(/^ppt\/slides\/slide(\d+)\.xml$/);
+        if (m) list.push({ num: parseInt(m[1], 10), path: path });
+      });
+      list.sort(function(a, b){ return a.num - b.num; });
+      if (!list.length) throw new Error("没找到幻灯片");
+      return Promise.all(list.map(function(s){
+        var relPath = s.path.replace(/slides\/(slide\d+)\.xml$/, "slides/_rels/$1.xml.rels");
+        var relFile = zip.file(relPath);
+        var relTask = relFile ? relFile.async("string").catch(function(){ return ""; }) : Promise.resolve("");
+        return Promise.all([zip.file(s.path).async("string"), relTask]).then(function(res){
+          var xml = res[0], relsXml = res[1];
+          return pptxCollectImages(xml, relsXml, zip, s.path).then(function(imgs){
+            return { num: s.num, texts: extractPptxText(xml), images: imgs };
+          });
+        });
+      }));
+    }).then(function(slides){
+      var html = slides.map(function(s){
+        var t = s.texts;
+        var head = t.length ? '<h3 class="slide-t">' + esc(t[0]) + '</h3>' : "";
+        var rest = t.slice(1).map(function(x){ return "<li>" + esc(x) + "</li>"; }).join("");
+        var imgs = (s.images || []).map(function(src){
+          return '<img alt="幻灯片图片" src="' + src + '" style="max-width:100%;height:auto;border-radius:6px;margin-top:10px">';
+        }).join("");
+        return '<div class="slide"><div class="slide-h">第 ' + s.num + " 页" +
+          (s.images && s.images.length ? " · " + s.images.length + " 张图" : "") + "</div>" + head +
+          (rest ? "<ul>" + rest + "</ul>" : (t.length ? "" : '<div style="color:var(--muted);font-size:13px">（这一页没有文字）</div>')) +
+          imgs + "</div>";
+      }).join("");
+      $("pptxView").innerHTML = html;
+      state.kind = "pptx";
+      state.current = { name: name };
+      state.text = slides.map(function(s){ return s.texts.join("\n"); }).join("\n\n");
+      state.current.slides = slides;
+      showView("pptxView");
+      setTitle(name, "PPT · " + slides.length + " 页");
+      updateSourceButton();
+      $("progress").style.opacity = "0";
+    }).catch(function(e){
+      toast("PPT 解析失败：" + (e.message || e), 4200);
+    }).then(function(){ busy(false); });
+  }
+
+  /* ---- PowerPoint 97-2003 (.ppt)：扫描 PowerPoint Document 流的文本记录 ---- */
+  function extractPptText(stream){
+    var out = [], pos = 0, guard = 0;
+    var rd16 = function(o){ return stream[o] | (stream[o+1] << 8); };
+    var rd32 = function(o){ return (stream[o] | (stream[o+1]<<8) | (stream[o+2]<<16) | (stream[o+3]<<24)) >>> 0; };
+    while (pos + 8 <= stream.length && guard++ < 300000){
+      var type = rd16(pos + 2);
+      var len = rd32(pos + 4);
+      var start = pos + 8;
+      if (len > stream.length - start) break;
+      if (type === 0x0FA0){                     // TextCharsAtom: UTF-16LE
+        var t = new TextDecoder("utf-16le").decode(stream.subarray(start, start + len));
+        if (t.trim()) out.push(t);
+      } else if (type === 0x0FA8 || type === 0x0FBA){  // TextBytesAtom / CString: ANSI
+        try {
+          var b = new TextDecoder("gbk").decode(stream.subarray(start, start + len));
+          if (b.trim()) out.push(b);
+        } catch(e){}
+      }
+      pos = start + len;
+    }
+    return out;
+  }
+  function renderPpt(u8, name){
+    busy(true, "解析 PowerPoint 97 文档…");
+    return LIB.load("xlsx.full.min.js").then(function(){
+      if (!window.XLSX || !XLSX.CFB) throw new Error("OLE2 解析器未就绪");
+      var cfb = XLSX.CFB.read(u8, { type: "array" });
+      var idx = -1;
+      for (var i = 0; i < cfb.FullPaths.length; i++){
+        if (/PowerPoint Document/i.test(cfb.FullPaths[i] || "")) { idx = i; break; }
+      }
+      if (idx < 0) throw new Error("这不是一份能解析的 PPT");
+      var stream = new Uint8Array(cfb.FileIndex[idx].content);
+      var texts = extractPptText(stream);
+      if (!texts.length) throw new Error("没提取到文字");
+      var html = texts.map(function(t, i){
+        var lines = t.split(/[\r\n\u000B\u000D]+/).map(function(x){ return x.trim(); }).filter(Boolean);
+        if (!lines.length) return "";
+        var head = '<div class="slide-t">' + esc(lines[0]) + "</div>";
+        var rest = lines.slice(1).map(function(x){ return "<li>" + esc(x) + "</li>"; }).join("");
+        return '<div class="slide"><div class="slide-h">文本块 ' + (i + 1) + "</div>" + head +
+          (rest ? "<ul>" + rest + "</ul>" : "") + "</div>";
+      }).join("");
+      $("pptxView").innerHTML = html || '<div class="slide">（没有可显示的文本）</div>';
+      state.kind = "pptx";
+      state.current = { name: name };
+      state.text = texts.join("\n\n");
+      showView("pptxView");
+      setTitle(name, "PPT · " + texts.length + " 个文本块");
+      updateSourceButton();
+      $("progress").style.opacity = "0";
+      busy(false);
+    }).catch(function(e){
+      busy(false);
+      showUnsupported(name, "PowerPoint 97 (.ppt)", e.message);
+    });
+  }
+
+  /* ---- RTF：控制词 + \uN? / \'hh 编码，转成段落 ---- */
+  function rtfToText(raw){
+    var s = raw;
+    s = s.replace(/\\u(-?\d+)\s?\??/g, function(m, n){
+      var c = parseInt(n, 10);
+      if (c < 0) c += 65536;
+      return String.fromCharCode(c & 0xFFFF);
+    });
+    s = s.replace(/(?:\\'[0-9a-fA-F]{2})+/g, function(m){
+      var hex = m.match(/[0-9a-fA-F]{2}/g) || [];
+      var bytes = new Uint8Array(hex.map(function(h){ return parseInt(h, 16); }));
+      try { return new TextDecoder("gbk").decode(bytes); } catch(e){ return m; }
+    });
+    s = s.replace(/\\\r?\n/g, "\n");
+    s = s.replace(/\\[a-zA-Z]+-?\d* ?/g, "");
+    s = s.replace(/\\\\([\\{}\\])/g, "$1");
+    s = s.replace(/[{}]/g, "");
+    s = s.replace(/\r/g, "\n");
+    return s;
+  }
+  function renderRtf(u8, name){
+    var raw = bytesToLatin1(u8);
+    var text = rtfToText(raw);
+    var paras = text.split(/\n{1,}/).map(function(x){ return x.trim(); }).filter(Boolean);
+    if (!paras.length) { showUnsupported(name, "RTF", "没提取到文字"); return; }
+    var html = paras.map(function(p){ return "<p>" + esc(p) + "</p>"; }).join("");
+    state.kind = "text";
+    state.current = { name: name };
+    renderRich(text, name, false, html);
+    $("progress").style.opacity = "0";
+  }
+
+  /* ---- ODT：zip 里的 content.xml ---- */
+  function odtToHtml(xml){
+    var out = [];
+    var doc;
+    try { doc = new DOMParser().parseFromString(xml, "application/xml"); }
+    catch(e){ return "<p>（ODT 解析失败）</p>"; }
+    function push(el){
+      var ln = el.localName;
+      var txt = (el.textContent || "").trim();
+      if (ln === "h"){
+        var lv = 1;
+        try {
+          lv = parseInt(el.getAttribute("text:outline-level") ||
+                       el.getAttributeNS("urn:oasis:names:tc:opendocument:xmlns:text:1.0", "outline-level") || "1", 10) || 1;
+        } catch(e){}
+        lv = Math.min(3, lv);
+        if (txt) out.push("<h" + lv + ">" + esc(txt) + "</h" + lv + ">");
+        return true;
+      }
+      if (ln === "p"){ if (txt) out.push("<p>" + esc(txt) + "</p>"); return true; }
+      if (ln === "table"){
+        var rows = [];
+        var trs = el.getElementsByTagNameNS("*", "table-row");
+        for (var i = 0; i < trs.length && i < 200; i++){
+          var cells = [], tds = trs[i].getElementsByTagNameNS("*", "table-cell");
+          for (var j = 0; j < tds.length && j < 40; j++) cells.push((tds[j].textContent || "").trim());
+          if (cells.length) rows.push(cells);
+        }
+        if (rows.length){
+          out.push("<table>" + rows.map(function(r, ri){
+            var tag = ri === 0 ? "th" : "td";
+            return "<tr>" + r.map(function(c){ return "<" + tag + ">" + esc(c) + "</" + tag + ">"; }).join("") + "</tr>";
+          }).join("") + "</table>");
+        }
+        return true;
+      }
+      return false;
+    }
+    var body = doc.getElementsByTagNameNS("*", "body")[0] || doc.documentElement;
+    (function walk(el){
+      if (!el) return;
+      if (push(el)) return;
+      var kids = el.children || [];
+      for (var i = 0; i < kids.length; i++) walk(kids[i]);
+    })(body);
+    return out.join("\n") || "<p>（这份 ODT 没有可显示的正文）</p>";
+  }
+  function renderOdt(u8, name){
+    busy(true, "解析 ODT…");
+    LIB.load("jszip.min.js").then(function(){
+      return JSZip.loadAsync(u8);
+    }).then(function(zip){
+      var f = zip.file("content.xml");
+      if (!f) throw new Error("这不是有效的 ODT");
+      return f.async("string");
+    }).then(function(xml){
+      var html = odtToHtml(xml);
+      state.kind = "text";
+      state.current = { name: name };
+      state.text = "";
+      var tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      renderRich(tmp.textContent || "", name, false, html);
+      $("progress").style.opacity = "0";
+      busy(false);
+    }).catch(function(e){
+      busy(false);
+      showUnsupported(name, "ODT", e.message);
+    });
+  }
+
+  /* ---------- 统一入口：按扩展名分流 ---------- */
+  function routeFile(u8, name){
+    state.source = false;
+    $("btnSource").classList.remove("on");
+    var k = kindOf(name, u8);
+    if (k === "docx") return renderDocx(u8, name);
+    if (k === "doc")  return renderDoc(u8, name);
+    if (k === "pdf")  return renderPdf(u8, name);
+    if (k === "xlsx" || k === "xls") return renderXlsx(u8, name);
+    if (k === "pptx") return renderPptx(u8, name);
+    if (k === "ppt")  return renderPpt(u8, name);
+    if (k === "zip")  return showUnsupported(name, "压缩包 (.zip)", "请先解压");
+    if (k === "ole2") return showUnsupported(name, "老式 Office 文档", "无法识别具体类型");
+    if (k === "rtf") return renderRtf(u8, name);
+    if (k === "odt") return renderOdt(u8, name);
+    var text = decodeUtf8(u8);
+    var ext = extOf(name);
+    renderRich(text, name, ext === "md" || ext === "markdown" || ext === "mdx" || ext === "mdown" || ext === "mkd");
+  }
+
+  function blocksToHtml(blocks){
+    return blocks.map(function(b){
+      if (b.type === "h") return "<h" + b.level + ">" + esc(b.text) + "</h" + b.level + ">";
+      if (b.type === "li") return "<ul><li>" + esc(b.text) + "</li></ul>";
+      if (b.type === "p") return "<p>" + esc(b.text) + "</p>";
+      if (b.type === "quote") return "<blockquote>" + esc(b.text) + "</blockquote>";
+      if (b.type === "code") return "<pre><code>" + esc(b.text) + "</code></pre>";
+      if (b.type === "hr") return "<hr>";
+      if (b.type === "table"){
+        return "<table>" + b.rows.map(function(r, i){
+          var tag = i === 0 ? "th" : "td";
+          return "<tr>" + r.map(function(c){ return "<" + tag + ">" + esc(c) + "</" + tag + ">"; }).join("") + "</tr>";
+        }).join("") + "</table>";
+      }
+      return "";
+    }).join("\n");
+  }
+
+  /* ==================== 搜索 ==================== */
+  function currentRoot(){
+    if (state.kind === "docx") return $("docView");
+    if (state.kind === "text") return state.source ? $("sourceView") : $("content");
+    return null;
+  }
+  function clearSearch(){
+    var root = currentRoot();
+    state.hits = []; state.hitIdx = 0;
+    if (!root) return;
+    root.querySelectorAll("mark.hl-hit").forEach(function(m){
+      var p = m.parentNode;
+      p.replaceChild(document.createTextNode(m.textContent), m);
+      p.normalize();
+    });
+    $("searchCount").textContent = "0/0";
+  }
+  function runSearch(q){
+    clearSearch();
+    var root = currentRoot();
+    if (!root || !q) { $("searchCount").textContent = "0/0"; return; }
+    if (state.kind !== "text" && state.kind !== "docx"){ toast("这个格式不支持搜索"); return; }
+    var lq = q.toLowerCase();
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
+    var targets = [], n;
+    while ((n = walker.nextNode())){
+      if (!n.nodeValue || n.nodeValue.toLowerCase().indexOf(lq) < 0) continue;
+      if (n.parentNode && /^(SCRIPT|STYLE|MARK)$/.test(n.parentNode.tagName)) continue;
+      targets.push(n);
+    }
+    targets.forEach(function(node){
+      var s = node.nodeValue, l = s.toLowerCase(), parts = [], last = 0, idx;
+      while ((idx = l.indexOf(lq, last)) >= 0){
+        if (idx > last) parts.push(document.createTextNode(s.slice(last, idx)));
+        var mk = document.createElement("mark");
+        mk.className = "hl-hit";
+        mk.textContent = s.slice(idx, idx + q.length);
+        parts.push(mk);
+        last = idx + q.length;
+      }
+      if (last < s.length) parts.push(document.createTextNode(s.slice(last)));
+      if (!parts.length) return;
+      var frag = document.createDocumentFragment();
+      parts.forEach(function(p){ frag.appendChild(p); });
+      node.parentNode.replaceChild(frag, node);
+    });
+    state.hits = Array.prototype.slice.call(root.querySelectorAll("mark.hl-hit"));
+    state.hitIdx = 0;
+    jumpHit(0);
+    $("searchCount").textContent = state.hits.length ? ("1/" + state.hits.length) : "0/0";
+  }
+  function jumpHit(i){
+    if (!state.hits.length) return;
+    if (i < 0) i = state.hits.length - 1;
+    if (i >= state.hits.length) i = 0;
+    state.hitIdx = i;
+    state.hits.forEach(function(h){ h.style.outline = "none"; });
+    var cur = state.hits[i];
+    cur.style.outline = "2px solid var(--accent)";
+    scrollScroller(cur.getBoundingClientRect().top + $("scroller").scrollTop - 110);
+    $("searchCount").textContent = (i + 1) + "/" + state.hits.length;
+  }
+
+  /* ==================== 结构提取（导出 Word / Excel / PPT 共用） ==================== */
+  function fakeInput(src, asMd){
+    var text = src != null ? src : state.text;
+    if (asMd !== false){
+      try { return marked.parse(text); } catch(e){ return "<pre>" + esc(text) + "</pre>"; }
+    }
+    return "<pre>" + esc(text) + "</pre>";
+  }
+  function blocksFromHtml(html){
+    var box = document.createElement("div");
+    box.innerHTML = html;
+    return blocksFromRoot(box);
+  }
+  function blocksFromRoot(root){
+    var out = [];
+    function walk(el){
+      var tag = (el.tagName || "").toLowerCase();
+      if (/^h[1-6]$/.test(tag)){
+        var t = (el.textContent || "").trim();
+        if (t) out.push({ type: "h", level: Math.min(3, parseInt(tag[1], 10)), text: t });
+      } else if (tag === "p"){
+        var pt = (el.textContent || "").trim();
+        if (pt) out.push({ type: "p", text: pt });
+      } else if (tag === "ul" || tag === "ol"){
+        Array.prototype.forEach.call(el.children, function(li){
+          var lt = (li.textContent || "").trim();
+          if (lt) out.push({ type: "li", text: lt });
+        });
+      } else if (tag === "table"){
+        var rows = [];
+        Array.prototype.forEach.call(el.querySelectorAll("tr"), function(tr){
+          var cells = [];
+          Array.prototype.forEach.call(tr.children, function(td){ cells.push((td.textContent || "").trim()); });
+          if (cells.length) rows.push(cells);
+        });
+        if (rows.length) out.push({ type: "table", rows: rows });
+      } else if (tag === "pre"){
+        var ct = (el.textContent || "").replace(/\n+$/, "");
+        if (ct) out.push({ type: "code", text: ct });
+      } else if (tag === "blockquote"){
+        var bt = (el.textContent || "").trim();
+        if (bt) out.push({ type: "quote", text: bt });
+      } else if (tag === "hr"){
+        out.push({ type: "hr" });
+      } else {
+        Array.prototype.forEach.call(el.children, walk);
+      }
+    }
+    Array.prototype.forEach.call(root.children, walk);
+    return out;
+  }
+  function currentBlocks(){
+    if (state.kind === "pptx" && state.current && state.current.slides){
+      return state.current.slides.map(function(s){
+        return { type: "h", level: 1, text: "第 " + s.num + " 页" };
+      });
+    }
+    var root = state.kind === "docx" ? $("docView") : $("content");
+    if (state.kind === "text" && !state.source) return blocksFromHtml($("content").innerHTML);
+    return blocksFromRoot(root);
+  }
+
+  /* ==================== 生成 Word (.docx) ==================== */
+  function xmlEsc(s){
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+  }
+  function docxParagraph(text, styleId, bold){
+    var ppr = styleId ? '<w:pPr><w:pStyle w:val="' + styleId + '"/></w:pPr>' : "";
+    var rpr = bold ? "<w:rPr><w:b/></w:rPr>" : "";
+    var runs = String(text || "").split(/\n/).map(function(line, i){
+      return (i ? "<w:br/>" : "") + '<w:t xml:space="preserve">' + xmlEsc(line) + "</w:t>";
+    }).join("");
+    return "<w:p>" + ppr + "<w:r>" + rpr + runs + "</w:r></w:p>";
+  }
+  function docxTable(rows){
+    var body = rows.map(function(r){
+      return "<w:tr>" + r.map(function(c){
+        return '<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr>' +
+          "<w:p><w:r><w:t xml:space=\"preserve\">" + xmlEsc(c) + "</w:t></w:r></w:p></w:tc>";
+      }).join("") + "</w:tr>";
+    }).join("");
+    return '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/></w:tblPr>' +
+      body + "</w:tbl>";
+  }
+  function buildDocx(blocks){
+    var body = blocks.map(function(b){
+      if (b.type === "h") return docxParagraph(b.text, "Heading" + b.level, false);
+      if (b.type === "li") return docxParagraph("• " + b.text, null, false);
+      if (b.type === "quote") return docxParagraph(b.text, "Quote", false);
+      if (b.type === "code") return docxParagraph(b.text, "Code", false);
+      if (b.type === "table") return docxTable(b.rows);
+      if (b.type === "hr") return docxParagraph("", null, false);
+      return docxParagraph(b.text, null, false);
+    }).join("");
+    var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      "<w:body>" + body +
+      '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/></w:sectPr>' +
+      "</w:body></w:document>";
+    var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+      "<w:docDefaults><w:rPrDefault><w:rPr>" +
+      '<w:rFonts w:ascii="Calibri" w:hAnsi="Calibri" w:eastAsia="Microsoft YaHei"/><w:sz w:val="22"/></w:rPr></w:rPrDefault>' +
+      '<w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="320" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+      '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:pPr><w:outlineLvl w:val="0"/><w:spacing w:before="240" w:after="120"/></w:pPr><w:rPr><w:b/><w:sz w:val="36"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:pPr><w:outlineLvl w:val="1"/><w:spacing w:before="180" w:after="90"/></w:pPr><w:rPr><w:b/><w:sz w:val="30"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:pPr><w:outlineLvl w:val="2"/><w:spacing w:before="120" w:after="60"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:rPr><w:color w:val="606870"/><w:i/></w:rPr></w:style>' +
+      '<w:style w:type="paragraph" w:styleId="Code"><w:name w:val="Code"/><w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/><w:sz w:val="19"/></w:rPr></w:style>' +
+      '<w:style w:type="table" w:styleId="TableGrid"><w:name w:val="Table Grid"/><w:tblPr>' +
+      '<w:tblBorders>' +
+      '<w:top w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>' +
+      '<w:left w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>' +
+      '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>' +
+      '<w:right w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>' +
+      '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>' +
+      '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>' +
+      "</w:tblBorders></w:tblPr></w:style>" +
+      "</w:styles>";
+    var ct = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+      '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+      "</Types>";
+    var rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+      "</Relationships>";
+    var drels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      "</Relationships>";
+    return LIB.load("jszip.min.js").then(function(){
+      var zip = new JSZip();
+      zip.file("[Content_Types].xml", ct);
+      zip.file("_rels/.rels", rels);
+      zip.file("word/document.xml", doc);
+      zip.file("word/styles.xml", styles);
+      zip.file("word/_rels/document.xml.rels", drels);
+      return zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+    });
+  }
+
+  /* ==================== 生成 Excel (.xlsx) ==================== */
+  function buildXlsx(blocks){
+    return LIB.load("xlsx.full.min.js").then(function(){
+      var wb = XLSX.utils.book_new();
+      var tables = blocks.filter(function(b){ return b.type === "table" && b.rows.length; });
+      if (tables.length){
+        tables.forEach(function(t, i){
+          var ws = XLSX.utils.aoa_to_sheet(t.rows);
+          XLSX.utils.book_append_sheet(wb, ws, "表" + (i + 1));
+        });
+      } else {
+        var rows = [["序号", "类型", "内容"]];
+        blocks.filter(function(b){ return b.text; }).forEach(function(b, i){
+          var label = b.type === "h" ? ("标题" + b.level) : (b.type === "li" ? "要点" : "正文");
+          rows.push([i + 1, label, b.text]);
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), "内容");
+      }
+      var out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      return new Uint8Array(out);
+    });
+  }
+
+  /* ==================== 生成 PPT (.pptx) ==================== */
+  function paginateForPpt(blocks){
+    var MAX_CHARS = 640, MAX_ITEMS = 8;
+    var pages = [], cur = null;
+    function newPage(title){ return { title: title || "", items: [], chars: 0 }; }
+    blocks.forEach(function(b){
+      if (b.type === "h" && b.level <= 2){
+        if (cur && (cur.items.length || cur.title)) pages.push(cur);
+        cur = newPage(b.text);
+      } else if (b.type === "table"){
+        if (!cur) cur = newPage("");
+        b.rows.slice(0, 6).forEach(function(r){
+          var line = r.join(" | ");
+          if (cur.items.length >= MAX_ITEMS || cur.chars + line.length > MAX_CHARS){ pages.push(cur); cur = newPage(""); }
+          cur.items.push(line); cur.chars += line.length;
+        });
+      } else if (b.text){
+        if (!cur) cur = newPage("");
+        if (cur.items.length >= MAX_ITEMS || cur.chars + b.text.length > MAX_CHARS){
+          pages.push(cur); cur = newPage("");
+        }
+        cur.items.push(b.text); cur.chars += b.text.length;
+      }
+    });
+    if (cur && (cur.items.length || cur.title)) pages.push(cur);
+    if (!pages.length) pages.push(newPage("未命名"));
+    return pages;
+  }
+  function buildPptx(blocks){
+    return LIB.load("pptxgen.bundle.js").then(function(){
+      var P = window.PptxGenJS;
+      var pptx = new P();
+      pptx.layout = "LAYOUT_16x9";
+      var pages = paginateForPpt(blocks);
+      pages.forEach(function(pg){
+        var slide = pptx.addSlide();
+        slide.background = { color: "FFFFFF" };
+        if (pg.title){
+          slide.addText(pg.title, {
+            x: 0.5, y: 0.45, w: 9, h: 0.9,
+            fontSize: pg.title.length > 24 ? 22 : 28, bold: true, color: "1F2328",
+            valign: "middle"
+          });
+          slide.addShape(pptx.ShapeType.rect, { x: 0.55, y: 1.38, w: 1.2, h: 0.06, fill: { color: "0969DA" } });
+        }
+        if (pg.items.length){
+          slide.addText(pg.items.map(function(t){
+            return { text: t, options: { bullet: true, breakLine: true } };
+          }), {
+            x: 0.62, y: pg.title ? 1.62 : 0.7, w: 8.78, h: pg.title ? 3.85 : 4.6,
+            fontSize: 16, color: "333333", valign: "top", lineSpacingMultiple: 1.2
+          });
+        }
+      });
+      return pptx.write({ outputType: "arraybuffer" }).then(function(buf){
+        return new Uint8Array(buf);
+      });
+    });
+  }
+
+  /* ==================== 写文件 ==================== */
+  function safeBase(){
+    var n = state.current ? state.current.name : "document";
+    n = n.replace(/\.[^.\/\\]+$/, "").replace(/[\\/:*?"<>|]+/g, "_").trim() || "document";
+    return n;
+  }
+  function saveBytes(name, mime, u8){
+    if (!NATIVE){
+      var blob = new Blob([u8], { type: mime });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      toast("已下载 " + name);
+      return;
+    }
+    MDNative.beginWrite(name, mime);
+    var b64 = u8ToB64(u8), CH = 60000;
+    for (var i = 0; i < b64.length; i += CH) MDNative.writeChunk(b64.slice(i, i + CH));
+    MDNative.endWrite();
+  }
+  function exportAs(kind, srcText, srcName){
+    var blocks;
+    if (srcText != null){
+      blocks = parseOutline(srcText);
+    } else {
+      blocks = currentBlocks();
+      srcName = state.current ? state.current.name : "document";
+    }
+    if (!blocks.length){ toast("没有可导出的内容"); return; }
+    var base = srcName ? String(srcName).replace(/\.[^.\/\\]+$/, "").replace(/[\\/:*?"<>|]+/g, "_") : safeBase();
+    busy(true, "正在生成…");
+    var job;
+    if (kind === "docx") job = buildDocx(blocks).then(function(u8){ saveBytes(base + ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", u8); });
+    else if (kind === "xlsx") job = buildXlsx(blocks).then(function(u8){ saveBytes(base + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", u8); });
+    else if (kind === "pptx") job = buildPptx(blocks).then(function(u8){ saveBytes(base + ".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", u8); });
+    else job = Promise.reject(new Error("未知格式"));
+    job.catch(function(e){ toast("生成失败：" + (e.message || e), 4200); })
+       .then(function(){ busy(false); });
+  }
+
+  /* ==================== HTML / PDF / PNG 导出 ==================== */
+  function buildStandaloneHtml(){
+    var styles = ["css-github-light", "css-hl-light"].map(function(id){
+      var el = $(id); return el ? el.textContent : "";
+    }).join("\n");
+    var inner = JSON.stringify($("content").innerHTML).replace(/<\//g, "<\\/");
+    return '<!DOCTYPE html>\n<html lang="zh-CN"><head><meta charset="utf-8">' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      "<title>" + esc(state.current ? state.current.name : "文档") + "</title>\n<style>\n" + styles + "\n" +
+      "body{margin:0;background:#fff;padding:0}" +
+      ".markdown-body{max-width:900px;margin:0 auto;padding:32px 22px;font-size:16px;line-height:1.78}" +
+      "img{max-width:100%;height:auto}table{border-collapse:collapse}td,th{border:1px solid #d1d9e0;padding:6px 10px}" +
+      "</style></head><body><article class=\"markdown-body\" id=\"doc\"></article>" +
+      '<script>document.getElementById("doc").innerHTML=' + inner + ";<\/script>" +
+      "</body></html>";
+  }
+  function exportHtml(){
+    if (!state.text && state.kind !== "text"){ toast("这个格式先转成 Markdown 再导出"); return; }
+    var html = buildStandaloneHtml();
+    saveBytes(safeBase() + ".html", "text/html", new TextEncoder().encode(html));
+  }
+  function exportCurrentPdf(){
+    if (!NATIVE){ fallbackDownload(true); return; }
+    if (state.kind === "pdf"){ toast("这已经是 PDF 了"); return; }
+    MDNative.exportPdf(safeBase() + ".pdf");
+  }
+  function exportCurrentPng(){
+    if (!NATIVE){ fallbackDownload(false); return; }
+    MDNative.exportPng(safeBase() + ".png");
+  }
+  function fallbackDownload(isPdf){
+    var html = buildStandaloneHtml();
+    var blob = new Blob([html], { type: "text/html" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = safeBase() + ".html";
+    a.click();
+    toast("浏览器版只能下载 HTML，PDF 请用 App");
+  }
+
+  /* ==================== 大纲解析（纯文本 / 中文层级） ==================== */
+  function looksLikeMarkdown(text){
+    // 只认强 markdown 标志（# 标题 / | 表格 / 代码块）。
+    // 列表符号和 "1." 太宽松，会把「一、二、三」式大纲整段误判成 markdown。
+    return /^#{1,6}\s/m.test(text) || /^\|.+\|$/m.test(text) || /```/.test(text);
+  }
+  function blocksFromPlainText(text){
+    var lines = String(text || "").split(/\r?\n/), out = [], table = null;
+    function flushTable(){
+      if (table && table.rows.length){ out.push({ type: "table", rows: table.rows }); }
+      table = null;
+    }
+    lines.forEach(function(raw){
+      var t = raw.replace(/\s+$/, "");
+      if (!t.trim()){ flushTable(); return; }
+      // 表格行
+      if (/^\s*\|.*\|\s*$/.test(t)){
+        var cells = t.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map(function(c){ return c.trim(); });
+        var isSep = cells.every(function(c){ return /^:?-{2,}:?$/.test(c); });
+        if (!table) table = { rows: [] };
+        if (isSep){ return; }
+        table.rows.push(cells);
+        return;
+      }
+      flushTable();
+      var m;
+      if ((m = t.match(/^(#{1,6})\s+(.*)$/))){
+        out.push({ type: "h", level: Math.min(3, m[1].length), text: m[2].trim() });
+      } else if ((m = t.match(/^第?([一二三四五六七八九十百]+)[、.．章部分节]\s*(.*)$/))){
+        out.push({ type: "h", level: 1, text: (m[2] || "").trim() || (m[1] + "、") });
+      } else if ((m = t.match(/^[（(]([一二三四五六七八九十]+)[）)]\s*(.*)$/))){
+        out.push({ type: "h", level: 2, text: (m[2] || "").trim() });
+      } else if ((m = t.match(/^(\d+)[.、．]\s+(.*)$/))){
+        out.push({ type: "li", text: m[2].trim() });
+      } else if ((m = t.match(/^(\d+\.\d+)\s+(.*)$/))){
+        out.push({ type: "h", level: 3, text: m[2].trim() });
+      } else if ((m = t.match(/^\s*([-*•·+])\s+(.*)$/))){
+        out.push({ type: "li", text: m[2].trim() });
+      } else if ((m = t.match(/^>\s*(.*)$/))){
+        out.push({ type: "quote", text: m[1].trim() });
+      } else {
+        out.push({ type: "p", text: t.trim() });
+      }
+    });
+    flushTable();
+    return out;
+  }
+  function parseOutline(text){
+    return looksLikeMarkdown(text) ? blocksFromHtml(fakeInput(text, true)) : blocksFromPlainText(text);
+  }
+
+  /* ==================== 抽屉 / 面板 ==================== */
+  function openDrawer(id){
+    closeDrawers();
+    $(id).classList.add("open");
+    $("scrim").classList.add("show");
+  }
+  function closeDrawers(){
+    ["fileDrawer", "tocDrawer"].forEach(function(id){ $(id).classList.remove("open"); });
+    $("scrim").classList.remove("show");
+    $("sheet").classList.remove("open");
+  }
+  function openOutline(){ $("outlinePanel").classList.add("open"); }
+  function closeOutline(){ $("outlinePanel").classList.remove("open"); }
+
+  /* ==================== 主题 / 字号 ==================== */
+  function applyTheme(t){
+    state.theme = t;
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem("mdlens.theme", t); } catch(e){}
+    syncNativeTheme();
+  }
+  function syncNativeTheme(){
+    var dark = state.theme === "dark" ||
+      (state.theme === "auto" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    try { if (NATIVE && MDNative.syncTheme) MDNative.syncTheme(!!dark); } catch(e){}
+  }
+  function applyFs(delta){
+    state.fs = Math.max(13, Math.min(26, state.fs + delta));
+    document.documentElement.style.setProperty("--fs", state.fs + "px");
+    try { localStorage.setItem("mdlens.fs", String(state.fs)); } catch(e){}
+  }
+
+  /* ==================== 事件绑定 ==================== */
+  function boot(){
+    applyTheme((function(){ try { return localStorage.getItem("mdlens.theme") || "auto"; } catch(e){ return "auto"; } })());
+    try { var fsv = parseInt(localStorage.getItem("mdlens.fs") || "", 10); if (fsv >= 13 && fsv <= 26) state.fs = fsv; } catch(e){}
+    document.documentElement.style.setProperty("--fs", state.fs + "px");
+    updateSourceButton();
+
+    $("btnMenu").onclick = function(){ openDrawer("fileDrawer"); };
+    $("btnToc").onclick = function(){
+      if ($("tocDrawer").classList.contains("open")){ closeDrawers(); $("btnToc").classList.remove("on"); }
+      else { openDrawer("tocDrawer"); $("btnToc").classList.add("on"); }
+    };
+    $("btnSource").onclick = function(){ showSource(!state.source); };
+    $("btnExport").onclick = function(){ $("sheet").classList.add("open"); $("scrim").classList.add("show"); };
+    $("btnSearch").onclick = function(){ toggleSearch(); };
+    $("scrim").onclick = closeDrawers;
+    $("fClose").onclick = closeDrawers;
+    $("tClose").onclick = function(){ closeDrawers(); $("btnToc").classList.remove("on"); };
+    $("exClose").onclick = closeDrawers;
+
+    $("wOpenFile").onclick = function(){ NATIVE ? MDNative.pickFile() : pickLocal(); };
+    $("wOpenFolder").onclick = function(){ NATIVE ? MDNative.pickFolder() : pickLocal(); };
+    $("wOutline").onclick = openOutline;
+
+    $("exWord").onclick = function(){ closeDrawers(); exportAs("docx"); };
+    $("exExcel").onclick = function(){ closeDrawers(); exportAs("xlsx"); };
+    $("exPpt").onclick = function(){ closeDrawers(); exportAs("pptx"); };
+    $("exPdf").onclick = function(){ closeDrawers(); exportCurrentPdf(); };
+    $("exHtml").onclick = function(){ closeDrawers(); exportHtml(); };
+    $("exPng").onclick = function(){ closeDrawers(); exportCurrentPng(); };
+    $("exCopy").onclick = function(){
+      closeDrawers();
+      var t = state.text || "";
+      if (NATIVE && MDNative.copyText) MDNative.copyText(t);
+      else if (navigator.clipboard) navigator.clipboard.writeText(t).then(function(){ toast("已复制"); });
+      else toast("复制失败");
+    };
+    $("exShare").onclick = function(){
+      closeDrawers();
+      if (NATIVE && MDNative.shareText) MDNative.shareText(state.text || "", (state.current && state.current.name) || "document.md");
+    };
+
+    // 搜索
+    $("sClose").onclick = toggleSearch;
+    $("sPrev").onclick = function(){ jumpHit(state.hitIdx - 1); };
+    $("sNext").onclick = function(){ jumpHit(state.hitIdx + 1); };
+    var sTimer = null;
+    $("searchInput").addEventListener("input", function(){
+      clearTimeout(sTimer);
+      var v = $("searchInput").value;
+      sTimer = setTimeout(function(){ runSearch(v); }, 260);
+    });
+    $("searchInput").addEventListener("keydown", function(e){
+      if (e.key === "Enter"){ e.preventDefault(); jumpHit(state.hitIdx + 1); }
+    });
+
+    // 大纲面板
+    $("opClose").onclick = closeOutline;
+    $("opPreview").onclick = function(){
+      var t = $("opText").value;
+      if (!t.trim()){ toast("先粘贴大纲内容"); return; }
+      closeOutline();
+      state.kind = "text";
+      var blocks = parseOutline(t);
+      renderRich(t, "大纲预览.md", true, blocksToHtml(blocks));
+    };
+    $("opDocx").onclick = function(){ outlineExport("docx"); };
+    $("opXlsx").onclick = function(){ outlineExport("xlsx"); };
+    $("opPptx").onclick = function(){ outlineExport("pptx"); };
+    $("opPdf").onclick = function(){ outlineExport("pdf"); };
+
+    // 标题双击换主题
+    var tap = 0;
+    $("title").onclick = function(){
+      var now = Date.now();
+      if (now - tap < 420){
+        applyTheme(state.theme === "dark" ? "light" : (state.theme === "light" ? "auto" : "dark"));
+        toast("主题：" + ({auto: "跟随系统", light: "亮色", dark: "暗色"})[state.theme]);
+        tap = 0;
+      } else tap = now;
+    };
+
+    // 键盘
+    document.addEventListener("keydown", function(e){
+      if ((e.ctrlKey || e.metaKey) && e.key === "="){ e.preventDefault(); applyFs(1); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "-"){ e.preventDefault(); applyFs(-1); }
+      if (e.key === "Escape"){ closeDrawers(); closeOutline(); $("searchBar").classList.remove("open"); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "f"){ e.preventDefault(); toggleSearch(); }
+    });
+
+    // 链接交给原生
+    document.addEventListener("click", function(e){
+      var a = e.target.closest && e.target.closest("a");
+      if (!a) return;
+      var href = a.getAttribute("href") || "";
+      if (!href || href.charAt(0) === "#") return;
+      if (NATIVE && /^https?:/i.test(href)){ e.preventDefault(); MDNative.openUrl(href); }
+    });
+
+    // 浏览器降级：选文件 / 拖拽
+    function pickLocal(){
+      var inp = document.createElement("input");
+      inp.type = "file";
+      inp.accept = ".md,.markdown,.mdx,.txt,.docx,.pdf,.xlsx,.xls,.pptx,.json,.csv";
+      inp.onchange = function(){
+        var f = inp.files[0]; if (!f) return;
+        var r = new FileReader();
+        r.onload = function(){ routeFile(new Uint8Array(r.result), f.name); };
+        r.readAsArrayBuffer(f);
+      };
+      inp.click();
+    }
+    document.addEventListener("dragover", function(e){ e.preventDefault(); });
+    document.addEventListener("drop", function(e){
+      e.preventDefault();
+      var f = e.dataTransfer.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function(){ routeFile(new Uint8Array(r.result), f.name); };
+      r.readAsArrayBuffer(f);
+    });
+
+    $("wHint").textContent = NATIVE
+      ? "也可以在文件管理器里点文档，选「MD 解读」直接打开"
+      : "浏览器版本：也可以直接把文件拖进这个页面";
+
+    if (NATIVE && MDNative.ready) MDNative.ready();
+  }
+
+  function toggleSearch(){
+    var bar = $("searchBar");
+    if (bar.classList.contains("open")){
+      bar.classList.remove("open");
+      clearSearch();
+      $("btnSearch").classList.remove("on");
+    } else {
+      if (state.kind !== "text" && state.kind !== "docx"){ toast("这个格式不支持搜索"); return; }
+      bar.classList.add("open");
+      $("btnSearch").classList.add("on");
+      $("searchInput").focus();
+    }
+  }
+
+  function outlineExport(kind){
+    var t = $("opText").value;
+    if (!t.trim()){ toast("先粘贴大纲内容"); return; }
+    var base = "大纲";
+    if (kind === "pdf"){
+      closeOutline();
+      renderRich(t, "大纲预览.md", true);
+      setTimeout(function(){ exportCurrentPdf(); }, 700);
+      return;
+    }
+    exportAs(kind, t, base);
+  }
+
+  /* ==================== 原生桥 ==================== */
+  var _rx = { name: "", buf: [] };
+  window.__nativeBegin = function(name){ _rx.name = name; _rx.buf = []; setProgress(25); };
+  window.__nativeChunk = function(b64){ _rx.buf.push(b64); };
+  window.__nativeEnd = function(){
+    setProgress(85);
+    try {
+      var u8 = b64ToU8(_rx.buf.join(""));
+      routeFile(u8, _rx.name);
+    } catch(e){
+      toast("打开失败：" + e.message, 4200);
+    }
+    _rx.buf = [];
+    setProgress(null);
+  };
+  window.__nativeError = function(msg){ setProgress(null); busy(false); toast("打开失败：" + msg, 4200); };
+  window.__nativeFiles = function(json){
+    try {
+      var files = JSON.parse(json);
+      state.files = files;
+      renderFileList(files);
+      if (files.length) toast("找到 " + files.length + " 个文档");
+      else toast("这个文件夹里没有找到文档");
+      openDrawer("fileDrawer");
+    } catch(e){ toast("列表解析失败"); }
+  };
+  window.__nativeSaved = function(msg){ setProgress(null); busy(false); toast(msg, 3400); };
+  window.__nativeBusy = function(show, msg){
+    busy(!!show, msg || "处理中…");
+    if (!show) setProgress(null);
+  };
+  window.MDLens = {
+    show: function(name, b64){ routeFile(b64ToU8(b64), name); },
+    setFiles: function(json){ window.__nativeFiles(json); },
+    toast: toast
+  };
+
+  function renderFileList(files){
+    var box = $("fileList");
+    if (!files.length){ box.innerHTML = '<div class="empty">这个文件夹里没有找到文档</div>'; return; }
+    var frag = document.createDocumentFragment();
+    files.forEach(function(f){
+      var b = document.createElement("button");
+      b.className = "fileitem";
+      b.innerHTML = '<span class="nm">' + esc(f.name || f.path) + "</span>" +
+        '<span class="meta">' + esc(f.dir || "") + (f.size ? " · " + fmtSize(f.size) : "") + "</span>";
+      b.onclick = function(){
+        closeDrawers();
+        setProgress(25);
+        if (NATIVE && MDNative.openFromList) MDNative.openFromList(f.uri, f.name);
+      };
+      frag.appendChild(b);
+    });
+    box.innerHTML = ""; box.appendChild(frag);
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

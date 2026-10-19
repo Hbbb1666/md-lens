@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.dsh.mdlens"
+    android:versionCode="21"
+    android:versionName="2.21">
+
+    <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:largeHeap="true"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode|density"
+            android:theme="@style/AppTheme">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- 文件管理器 / 其他 App 用「打开方式」打开 .md（content:// + markdown 类 MIME） -->
+            <intent-filter android:label="@string/app_name">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="text/markdown" />
+                <data android:scheme="content" android:mimeType="text/x-markdown" />
+            </intent-filter>
+
+            <!-- 很多文件管理器把 .md 认成 text/plain 或 octet-stream，必须兜住 -->
+            <intent-filter android:label="@string/app_name">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="text/plain" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- 老式 file:// 路径，按扩展名匹配 -->
+            <intent-filter android:label="@string/app_name">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" android:mimeType="*/*" android:pathPattern=".*\\.md" />
+                <data android:scheme="file" android:mimeType="*/*" android:pathPattern=".*\\.markdown" />
+                <data android:scheme="file" android:mimeType="*/*" android:pathPattern=".*\\.mdx" />
+                <data android:scheme="file" android:mimeType="*/*" android:pathPattern=".*\\.MD" />
+            </intent-filter>
+
+            <!-- ===== 从微信/QQ/网盘等「分享」单个文件 =====
+                 微信和 QQ 分享文件时发的是 ACTION_SEND + 具体 MIME（看扩展名），
+                 早期只声明 text/plain 完全匹配不上，所以分享面板里不出现。
+                 这里把办公文档的全部 MIME 都列上，并用 */* 兜底。 -->
+            <intent-filter android:label="@string/app_name">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/msword" />
+                <data android:mimeType="application/vnd.ms-excel" />
+                <data android:mimeType="application/vnd.ms-powerpoint" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- ===== 分享多个文件（微信可多选） ===== -->
+            <intent-filter android:label="@string/app_name">
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/msword" />
+                <data android:mimeType="application/vnd.ms-excel" />
+                <data android:mimeType="application/vnd.ms-powerpoint" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- ===== 兜底：任何类型都能分享进来 =====
+                 微信某些版本、QQ 文件助手会发 */*；App 内再判断格式，
+                 不支持的就直接提示，不硬解析。 -->
+            <intent-filter android:label="@string/app_name" android:priority="-10">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+
+        </activity>
+    </application>
+</manifest>
