@@ -24,9 +24,14 @@ step() { echo "[build] → $*"; }
 # 原生 Windows 程序，不认这种路径（javac 会报 “找不到文件: \d\work\...”）。
 # 凡是传给原生程序的路径都过一遍 wp()。
 if command -v cygpath >/dev/null 2>&1; then
-  wp() { cygpath -w "$1"; }
+  # Windows：cygpath -w 自身输出带换行，单路径场景用命令替换即可去掉
+  wp()  { cygpath -w "$1"; }
+  wpl() { cygpath -w "$1"; }
 else
-  wp() { printf '%s' "$1"; }
+  # 单路径：绝不能带换行（会污染 -classpath 等参数）
+  wp()  { printf '%s' "$1"; }
+  # 列表项（写进 @file 的）：必须带换行，否则所有路径会粘成一行
+  wpl() { printf '%s\n' "$1"; }
 fi
 
 [ -x $Q ]  || fail "缺少 qemu-amd64-static（aapt2/zipalign 是 x86_64）"
@@ -88,7 +93,7 @@ $Q "$BT/aapt2" link \
 
 # ---------- 4. 编译 Java ----------
 step "编译 Java"
-find "$P/src" "$OUT/gen" -name "*.java" | while IFS= read -r f; do wp "$f"; done > "$OUT/sources.txt"
+find "$P/src" "$OUT/gen" -name "*.java" | while IFS= read -r f; do wpl "$f"; done > "$OUT/sources.txt"
 grep -c . "$OUT/sources.txt" >/dev/null || fail "没有 Java 源文件"
 javac --release 17 -encoding UTF-8 -classpath "$(wp "$AJ")" -d "$(wp "$OUT/classes")" \
     @"$(wp "$OUT/sources.txt")" || fail "javac 失败"
@@ -98,7 +103,7 @@ NCLASS=$(find "$OUT/classes" -name "*.class" | wc -l)
 
 # ---------- 5. dex ----------
 step "生成 dex"
-find "$OUT/classes" -name "*.class" | while IFS= read -r f; do wp "$f"; done > "$OUT/classes.txt"
+find "$OUT/classes" -name "*.class" | while IFS= read -r f; do wpl "$f"; done > "$OUT/classes.txt"
 java -cp "$(wp "$BT/lib/d8.jar")" com.android.tools.r8.D8 \
     --lib "$(wp "$AJ")" --min-api 29 --output "$(wp "$OUT/dex")" @"$(wp "$OUT/classes.txt")" \
     || fail "d8 失败"
